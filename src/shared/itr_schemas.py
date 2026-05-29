@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 # ==============================================================================
 # GENERAL ENUMS & BASIC MODELS
@@ -32,13 +32,13 @@ class AssetType(str, Enum):
     OTHERS = "OTHERS"
 
 class PersonalInfo(BaseModel):
-    pan: str = Field(..., regex=r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", description="Permanent Account Number")
-    aadhaar_number: Optional[str] = Field(None, regex=r"^[0-9]{12}$")
+    pan: str = Field(..., pattern=r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", description="Permanent Account Number")
+    aadhaar_number: Optional[str] = Field(None, pattern=r"^[0-9]{12}$")
     first_name: str
     middle_name: Optional[str] = None
     last_name: str
     date_of_birth: date
-    email: EmailStr
+    email: str = Field(..., description="Email address of the filer")
     mobile_number: str
     residential_status: ResidentialStatus = ResidentialStatus.RESIDENT
     filing_section: FilingSection = FilingSection.ON_OR_BEFORE_DUE_DATE
