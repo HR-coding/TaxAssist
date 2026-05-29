@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tax-agent-mcp"
+version = "1.0.0"
+description = "MCP layer for AI-native tax filing agent"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pymongo>=4.6.0",
+    "google-auth>=2.25.0",
+    "google-auth-oauthlib>=1.1.0",
+    "google-api-python-client>=2.111.0",
+    "pydantic>=2.5.0"
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+pythonpath = ["src"]
