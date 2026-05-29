@@ -28,12 +28,13 @@ class ProcessedDocument(Document):
     financial_data: Optional[FinancialData] = None
     processed_at: Optional[datetime] = None
 
+from shared import ITR1Profile, ITR2Profile
+from typing import Union
+
 class FinancialProfile(BaseModel):
     user_id: str
-    tax_year: int
-    w2s: List[Dict[str, Any]] = Field(default_factory=list, description="List of W-2 records")
-    ten99s: List[Dict[str, Any]] = Field(default_factory=list, description="List of 1099 records")
-    deductions: Dict[str, Any] = Field(default_factory=dict, description="Aggregated deduction data")
+    itr_type: str = Field(default="ITR2", description="ITR1 or ITR2")
+    profile_data: Union[ITR1Profile, ITR2Profile] = Field(..., description="ITR layout schemas")
     modified_at: datetime = Field(default_factory=datetime.utcnow)
 
 class DocumentAuditRecord(BaseModel):

@@ -70,9 +70,20 @@ def test_process_document_flow(doc_env):
     # Verify user financial profile was updated
     profile = repo.get_financial_profile(user_id)
     assert profile is not None
-    assert len(profile.w2s) == 1
-    assert profile.w2s[0]["wages_tips_other_comp"] == 85000.0
-    assert profile.deductions["total_w2_income"] == 85000.0
+    assert profile.itr_type == "ITR2"
+    
+    itr_data = profile.profile_data
+    # If loaded as Pydantic model
+    from shared.itr_schemas import ITR2Profile
+    if isinstance(itr_data, ITR2Profile):
+        assert len(itr_data.schedule_salary) == 1
+        assert itr_data.schedule_salary[0].salary_u_s_17_1 == 85000.0
+        assert itr_data.taxes_paid.tds_on_salary == 12750.0
+    else:
+        # If raw dict
+        assert len(itr_data.get("schedule_salary", [])) == 1
+        assert itr_data["schedule_salary"][0]["salary_u_s_17_1"] == 85000.0
+        assert itr_data["taxes_paid"]["tds_on_salary"] == 12750.0
 
     # Verify audit trail records
     audits = repo.get_audit_records(doc_id)

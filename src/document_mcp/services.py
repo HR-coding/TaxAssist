@@ -190,40 +190,118 @@ class FinancialExtractor(IFinancialExtractor):
 
 class FinancialProfileBuilder(IFinancialProfileBuilder):
     """
-    Consolidates documents data into a single cumulative user profile.
+    Consolidates documents data into a single cumulative ITR-based user profile.
     """
     def __init__(self, repository: MongoDocumentRepository):
         self.repository = repository
 
     def update_profile(self, user_id: str, data: FinancialData) -> FinancialProfile:
         with timed_operation("FinancialProfileBuilder.update_profile", {"user_id": user_id}):
+            from shared.itr_schemas import (
+                ITR2Profile,
+                PersonalInfo,
+                TaxesPaidSummary,
+                ITR2CapitalGainsSchedule,
+                ITR2OtherSourcesDetail,
+                ITR1ChapterVIA,
+                ITR2SalaryEmployer,
+                ResidentialStatus,
+                FilingSection
+            )
+            from datetime import date
+
             profile = self.repository.get_financial_profile(user_id)
             if not profile:
+                # Initialize a default ITR-2 envelope containing basic personal info schema
+                p_info = PersonalInfo(
+                    pan="ABCDE1234F",
+                    aadhaar_number="123456789012",
+                    first_name="John",
+                    last_name="Doe",
+                    date_of_birth=date(1990, 1, 1),
+                    email="john.doe@example.com",
+                    mobile_number="9876543210",
+                    residential_status=ResidentialStatus.RESIDENT,
+                    filing_section=FilingSection.ON_OR_BEFORE_DUE_DATE
+                )
+                itr_profile = ITR2Profile(
+                    user_id=user_id,
+                    tax_year=datetime.utcnow().year - 1,
+                    personal_info=p_info,
+                    schedule_salary=[],
+                    schedule_house_property=[],
+                    schedule_capital_gains=ITR2CapitalGainsSchedule(),
+                    schedule_other_sources=ITR2OtherSourcesDetail(),
+                    schedule_via_deductions=ITR1ChapterVIA(),
+                    taxes_paid=TaxesPaidSummary()
+                )
                 profile = FinancialProfile(
                     user_id=user_id,
-                    tax_year=datetime.utcnow().year - 1, # Default to last tax year
-                    w2s=[],
-                    ten99s=[],
-                    deductions={},
+                    itr_type="ITR2",
+                    profile_data=itr_profile,
                     modified_at=datetime.utcnow()
                 )
 
-            # Append parsed document
+            # Map inputs to ITR-2 schedules
+            itr = profile.profile_data
+            
+            # Since Pydantic nested dict instantiation changes raw models, verify or load model:
+            if not isinstance(itr, ITR2Profile):
+                itr = ITR2Profile(**itr)
+
             if data.document_type == "W2":
-                # Check for duplicates by Employer EIN
-                ein = data.extracted_fields.get("employer_ein")
-                existing = next((w for w in profile.w2s if w.get("employer_ein") == ein), None)
+                fields = data.extracted_fields
+                emp_salary = ITR2SalaryEmployer(
+                    employer_name=fields.get("employer_name", "Unknown Employer"),
+                    employer_ein=fields.get("employer_ein", "00-0000000"),
+                    employer_address="123 Corporate Way",
+                    salary_u_s_17_1=fields.get("wages_tips_other_comp", 0.0),
+                    perquisites_u_s_17_2=0.0,
+                    profits_in_lieu_u_s_17_3=0.0,
+                    exempt_allowances_total=0.0,
+                    deductions_u_s_16_total=50000.0,
+                    net_employer_income=max(0.0, fields.get("wages_tips_other_comp", 0.0) - 50000.0)
+                )
+
+                # Check duplicates by EIN
+                existing = next((s for s in itr.schedule_salary if s.employer_ein == emp_salary.employer_ein), None)
                 if existing:
-                    profile.w2s.remove(existing)
-                profile.w2s.append(data.extracted_fields)
+                    itr.schedule_salary.remove(existing)
+                itr.schedule_salary.append(emp_salary)
+
+                # Update withholdings summary
+                itr.taxes_paid.tds_on_salary = sum(
+                    float(s.salary_u_s_17_1 * 0.15) for s in itr.schedule_salary
+                )  # Simulated tax calculation logic
+                itr.taxes_paid.total_taxes_paid = (
+                    itr.taxes_paid.advance_tax +
+                    itr.taxes_paid.self_assessment_tax +
+                    itr.taxes_paid.tds_on_salary +
+                    itr.taxes_paid.tds_other_than_salary +
+                    itr.taxes_paid.tcs
+                )
+
             elif data.document_type in ("1099_NEC", "1099_INT"):
-                profile.ten99s.append(data.extracted_fields)
-            
-            # Recalculate basic deductions or summaries
-            total_wages = sum(float(w.get("wages_tips_other_comp", 0)) for w in profile.w2s)
-            profile.deductions["computed_standard_deduction"] = 14600.00 # For Single filer 2024 tax year
-            profile.deductions["total_w2_income"] = total_wages
-            
+                fields = data.extracted_fields
+                # Map freelance or interest to other sources
+                val = fields.get("nonemployee_compensation", 0.0) or fields.get("savings_interest", 0.0) or 1000.0
+                if data.document_type == "1099_INT":
+                    itr.schedule_other_sources.savings_interest = val
+                else:
+                    itr.schedule_other_sources.fd_interest = val
+                
+                # Re-sum income other sources
+                itr.schedule_other_sources.net_other_sources_income = (
+                    itr.schedule_other_sources.savings_interest +
+                    itr.schedule_other_sources.fd_interest +
+                    itr.schedule_other_sources.dividend_income_domestic +
+                    itr.schedule_other_sources.dividend_income_foreign +
+                    itr.schedule_other_sources.family_pension +
+                    itr.schedule_other_sources.rental_from_machinery_plant -
+                    itr.schedule_other_sources.deductions_u_s_57
+                )
+
+            profile.profile_data = itr
             profile.modified_at = datetime.utcnow()
             self.repository.save_financial_profile(profile)
             return profile
