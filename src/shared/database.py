@@ -1,11 +1,51 @@
 import os
-from typing import Any, Dict, Generator, Optional
+from datetime import datetime
+from typing import Any, Dict, Generator, List, Optional
 import pymongo
 from pymongo.errors import PyMongoError
 from mcp_framework.errors import RepositoryException
 from mcp_framework.observability import logger
 
 _db_client: Optional[Any] = None
+
+class MockCursor:
+    """
+    Simulates a MongoDB Cursor returned by find(), providing method chaining
+    for sort() and limit(), and implementing __iter__.
+    """
+    def __init__(self, data: List[Dict[str, Any]]):
+        self.data = list(data)
+
+    def sort(self, key_or_list, direction=None) -> "MockCursor":
+        if isinstance(key_or_list, list):
+            # E.g. sort([("timestamp", -1)])
+            for sort_key, sort_dir in reversed(key_or_list):
+                self.data.sort(
+                    key=lambda x: x.get(sort_key) if x.get(sort_key) is not None else datetime.min, 
+                    reverse=(sort_dir == -1)
+                )
+        else:
+            # E.g. sort("timestamp", -1)
+            reverse = (direction == -1)
+            self.data.sort(
+                key=lambda x: x.get(key_or_list) if x.get(key_or_list) is not None else datetime.min, 
+                reverse=reverse
+            )
+        return self
+
+    def limit(self, n: int) -> "MockCursor":
+        self.data = self.data[:n]
+        return self
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index]
+
 
 class MockMongoCollection:
     """
@@ -31,7 +71,7 @@ class MockMongoCollection:
                 return dict(item)
         return None
 
-    def find(self, filter: Dict[str, Any], projection: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def find(self, filter: Dict[str, Any], projection: Optional[Dict[str, Any]] = None) -> MockCursor:
         results = []
         for item in self.data.values():
             match = True
@@ -44,7 +84,7 @@ class MockMongoCollection:
                     break
             if match:
                 results.append(dict(item))
-        return results
+        return MockCursor(results)
 
     def insert_one(self, document: Dict[str, Any]) -> Any:
         doc = dict(document)
