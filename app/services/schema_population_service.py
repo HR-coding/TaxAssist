@@ -1,8 +1,8 @@
-from tools.gemini_extractor import (
+from app.tools.gemini_extractor import (
     extract_to_schema
 )
 
-from services.itr_service import (
+from app.services.itr_service import (
     update_itr
 )
 

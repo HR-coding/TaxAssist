@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 
 import base64
 
-from tools.google_drive_client import (
+from app.tools.google_drive_client import (
     get_drive_service
 )
 

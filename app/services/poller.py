@@ -1,19 +1,19 @@
 import os
 import time
 
-from services.document_registry import (
+from app.services.document_registry import (
     register_document
 )
 
-from services.workflow_service import (
+from app.services.workflow_service import (
     get_workflow
 )
 
-from engine.decider import (
+from app.engine.decider import (
     determine_next_step
 )
 
-from orchestrator.workflow_executor import (
+from app.orchestrator.workflow_executor import (
     execute_workflow
 )
 

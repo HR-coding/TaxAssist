@@ -1,4 +1,4 @@
-from services.db import db
+from app.services.db import db
 
 from app.models.itr1_schema import (
     ITR1_SCHEMA

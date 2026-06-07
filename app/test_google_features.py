@@ -1,12 +1,12 @@
-from tools.gmail_client import (
+from app.tools.gmail_client import (
     send_email
 )
 
-from tools.calendar_client import (
+from app.tools.calendar_client import (
     create_tax_reminder
 )
 
-from tools.itr1_calculator import (
+from app.tools.itr1_calculator import (
     calculate_itr1_tax
 )
 

@@ -1,14 +1,18 @@
-from services.db import db
+from app.services.db import db
 
 
 def create_workflow(user_id):
 
     workflow = {
+
         "user_id": user_id,
 
-        "status": "RECEIVED",
+        "status": "INGESTED",
 
-        "current_step": "DOCUMENT_UPLOADED",
+        "current_step":
+            "DOCUMENT_RECEIVED",
+
+        "audit_history": [],
 
         "document_data": {},
 
@@ -53,6 +57,25 @@ def advance_workflow(
         {
             "$set": {
                 "current_step": next_step
+            }
+        }
+    )
+
+
+def add_audit_event(
+    user_id,
+    event
+):
+
+    db.workflow_states.update_one(
+
+        {
+            "user_id": user_id
+        },
+
+        {
+            "$push": {
+                "audit_history": event
             }
         }
     )

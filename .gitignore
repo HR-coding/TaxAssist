@@ -1,8 +1,9 @@
-﻿.env
+.env
 venv/
-__pycache__/
 uploads/
-*.zip
+__pycache__/
 credentials/
 client_secret.json
 token.json
+*.zip
+*.db

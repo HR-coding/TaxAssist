@@ -1,27 +1,27 @@
 import re
 
-from tools.document_processor import (
+from app.tools.document_processor import (
     process_document
 )
 
-from tools.tax_rules import (
+from app.tools.tax_rules import (
     retrieve_tax_rules
 )
 
-from tools.itr1_calculator import (
+from app.tools.itr1_calculator import (
     calculate_itr1_tax
 )
 
-from services.workflow_service import (
+from app.services.workflow_service import (
     update_workflow,
     get_workflow
 )
 
-from services.document_registry import (
+from app.services.document_registry import (
     get_document_by_id
 )
 
-from tools.pdf_processor import (
+from app.tools.pdf_processor import (
     extract_pdf_text
 )
 

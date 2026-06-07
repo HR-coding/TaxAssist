@@ -1,4 +1,4 @@
-from tools.pdf_processor import (
+from app.tools.pdf_processor import (
     extract_pdf_text
 )
 

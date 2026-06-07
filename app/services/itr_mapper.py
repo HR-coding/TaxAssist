@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from models.itr1_schema import (
+from app.models.itr1_schema import (
     ITR1_SCHEMA
 )
 

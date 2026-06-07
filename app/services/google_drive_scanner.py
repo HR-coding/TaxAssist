@@ -1,21 +1,21 @@
-from tools.google_drive_client import (
+from app.tools.google_drive_client import (
     get_drive_service
 )
 
-from services.document_registry import (
+from app.services.document_registry import (
     get_document_by_source_id,
     register_document,
     update_document_hash,
     mark_document_orphaned
 )
 
-from services.document_registry import (
+from app.services.document_registry import (
     get_document_by_source_id,
     register_document,
     update_document_hash
 )
 
-from tools.hash_generator import (
+from app.tools.hash_generator import (
     generate_hash
 )
 
@@ -107,7 +107,7 @@ def detect_deleted_documents():
         for file in files
     }
 
-    from services.db import db
+    from app.services.db import db
 
     documents = (
         db.document_registry.find()

@@ -1,4 +1,4 @@
-from services.db import db
+from app.services.db import db
 
 
 def create_state(user_id):

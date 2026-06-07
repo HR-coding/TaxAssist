@@ -1,4 +1,4 @@
-from tools.tax_rules import retrieve_tax_rules
+from app.tools.tax_rules import retrieve_tax_rules
 
 
 def retrieve_tax_rules_mcp():

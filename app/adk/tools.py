@@ -2,7 +2,7 @@ from mcps.document_mcp import process_document_mcp
 from mcps.tax_rules_mcp import retrieve_tax_rules_mcp
 from mcps.workflow_mcp import update_workflow_mcp
 
-from tools.tax_calculator import calculate_tax
+from app.tools.tax_calculator import calculate_tax
 
 
 def process_document_tool(document_text: str):

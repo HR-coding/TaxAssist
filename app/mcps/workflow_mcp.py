@@ -1,4 +1,4 @@
-from services.workflow_service import update_workflow
+from app.services.workflow_service import update_workflow
 
 
 def update_workflow_mcp(

@@ -77,10 +77,41 @@ def process_document(document_text):
     salary = 0
 
     if gross_salary:
+
         salary = int(
             gross_salary.group(1)
             .replace(",", "")
         )
+
+    confidence_scores = {
+
+        "employee_name":
+            0.95 if employee_name else 0.0,
+
+        "pan_number":
+            0.98 if pan_number else 0.0,
+
+        "gross_salary":
+            0.95 if gross_salary else 0.0,
+
+        "savings_interest":
+            0.90 if savings_interest else 0.0,
+
+        "fd_interest":
+            0.90 if fd_interest else 0.0,
+
+        "dividend_income":
+            0.90 if dividend_income else 0.0,
+
+        "deduction_80c":
+            0.95 if deduction_80c else 0.0,
+
+        "deduction_80d":
+            0.95 if deduction_80d else 0.0,
+
+        "tds_salary":
+            0.95 if tds_salary else 0.0
+    }
 
     return {
 
@@ -119,6 +150,9 @@ def process_document(document_text):
 
         "tds_salary":
             get_amount(tds_salary),
+
+        "confidence_scores":
+            confidence_scores,
 
         "raw_text_length":
             len(document_text)
