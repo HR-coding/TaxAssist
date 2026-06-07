@@ -1,0 +1,19 @@
+from fastapi import APIRouter
+
+from services.workflow_service import (
+    get_workflow
+)
+
+router = APIRouter()
+
+
+@router.get(
+    "/workflow/{user_id}"
+)
+def get_workflow_status(
+    user_id: str
+):
+
+    return get_workflow(
+        user_id
+    )

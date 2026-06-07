@@ -1,0 +1,11 @@
+{
+    "old_regime": {
+        "standard_deduction": 50000,
+        "tax_slabs": [
+            "0-3L : 0%",
+            "3L-6L : 5%",
+            "6L-9L : 10%",
+            "9L+ : 15%"
+        ]
+    }
+}
