@@ -1,31 +1,6 @@
-from googleapiclient.discovery import (
-    build
-)
-
 from email.mime.text import MIMEText
-
 import base64
-
-from app.tools.google_drive_client import (
-    get_drive_service
-)
-
-
-def get_gmail_service():
-
-    creds = (
-        get_drive_service()
-        ._http.credentials
-    )
-
-    service = build(
-        "gmail",
-        "v1",
-        credentials=creds
-    )
-
-    return service
-
+from app.utils.google_auth import get_gmail_service
 
 def send_email(
     to_email,
@@ -55,3 +30,22 @@ def send_email(
     return {
         "status": "EMAIL_SENT"
     }
+
+def read_email(
+    message_id
+):
+
+    service = get_gmail_service()
+
+    message = (
+        service.users()
+        .messages()
+        .get(
+            userId="me",
+            id=message_id
+        )
+        .execute()
+    )
+
+    return message
+

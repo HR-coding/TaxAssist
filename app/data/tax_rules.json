@@ -1,11 +1,93 @@
 {
-    "old_regime": {
-        "standard_deduction": 50000,
-        "tax_slabs": [
-            "0-3L : 0%",
-            "3L-6L : 5%",
-            "6L-9L : 10%",
-            "9L+ : 15%"
-        ]
+  "_comment": "Indian Income Tax Rules FY 2025-26 (AY 2026-27). Source: https://www.incometaxindia.gov.in/",
+
+  "new_regime": {
+    "_note": "Default regime from FY 2023-24. No chapter VIA deductions except 80CCD(2) and 80CCH.",
+    "standard_deduction": 75000,
+    "rebate_87a_limit": 700000,
+    "rebate_87a_amount": 25000,
+    "surcharge_rates": [
+      {"above": 5000000,  "rate": 0.10},
+      {"above": 10000000, "rate": 0.15},
+      {"above": 20000000, "rate": 0.25},
+      {"above": 50000000, "rate": 0.25}
+    ],
+    "cess_rate": 0.04,
+    "tax_slabs": [
+      {"from": 0,       "to": 300000,   "rate": 0.00, "label": "0–3L: 0%"},
+      {"from": 300000,  "to": 600000,   "rate": 0.05, "label": "3L–6L: 5%"},
+      {"from": 600000,  "to": 900000,   "rate": 0.10, "label": "6L–9L: 10%"},
+      {"from": 900000,  "to": 1200000,  "rate": 0.15, "label": "9L–12L: 15%"},
+      {"from": 1200000, "to": 1500000,  "rate": 0.20, "label": "12L–15L: 20%"},
+      {"from": 1500000, "to": null,     "rate": 0.30, "label": "15L+: 30%"}
+    ]
+  },
+
+  "old_regime": {
+    "_note": "Optional. Allows Chapter VIA deductions (80C, 80D, 80CCD1B, 80TTA etc.).",
+    "standard_deduction": 50000,
+    "rebate_87a_limit": 500000,
+    "rebate_87a_amount": 12500,
+    "surcharge_rates": [
+      {"above": 5000000,  "rate": 0.10},
+      {"above": 10000000, "rate": 0.15},
+      {"above": 20000000, "rate": 0.25},
+      {"above": 50000000, "rate": 0.37}
+    ],
+    "cess_rate": 0.04,
+    "tax_slabs": [
+      {"from": 0,       "to": 250000,  "rate": 0.00, "label": "0–2.5L: 0%"},
+      {"from": 250000,  "to": 500000,  "rate": 0.05, "label": "2.5L–5L: 5%"},
+      {"from": 500000,  "to": 1000000, "rate": 0.20, "label": "5L–10L: 20%"},
+      {"from": 1000000, "to": null,    "rate": 0.30, "label": "10L+: 30%"}
+    ]
+  },
+
+  "section_limits": {
+    "80C":     {"max": 150000, "description": "LIC, PPF, ELSS, home loan principal, tuition fees"},
+    "80CCC":   {"max": 150000, "description": "Pension fund contributions (within 80C aggregate)"},
+    "80CCD1":  {"max": 150000, "description": "NPS employee contribution (within 80C aggregate)"},
+    "80CCD1B": {"max": 50000,  "description": "Additional NPS contribution over 80C limit"},
+    "80CCD2":  {"max": null,   "description": "Employer NPS contribution: 10% of salary (old); 14% of salary (new)"},
+    "80D":     {"max": 25000,  "description": "Health insurance premium (50000 for senior citizens)"},
+    "80DD":    {"max": 75000,  "description": "Disabled dependent (125000 for severe disability)"},
+    "80DDB":   {"max": 40000,  "description": "Treatment of specified diseases (100000 for senior citizens)"},
+    "80E":     {"max": null,   "description": "Interest on education loan (no upper limit, 8 years)"},
+    "80EEA":   {"max": 150000, "description": "First-time home buyer additional deduction"},
+    "80G":     {"max": null,   "description": "Donations (100% or 50% depending on institution)"},
+    "80TTA":   {"max": 10000,  "description": "Savings account interest (non-senior citizens)"},
+    "80TTB":   {"max": 50000,  "description": "Interest income for senior citizens (replaces 80TTA)"},
+    "24b":     {"max": 200000, "description": "Home loan interest on self-occupied property"}
+  },
+
+  "ITR1": {
+    "_note": "Applicable for residents with salary, one house property, other sources, total income <= 50L.",
+    "eligible_income_sources": ["salary", "one_house_property", "other_sources"],
+    "max_income": 5000000,
+    "schedule_checklist_defaults": {
+      "salary_income": "PENDING",
+      "house_property": "PENDING",
+      "other_sources": "PENDING",
+      "deductions": "PENDING"
     }
+  },
+
+  "ITR2": {
+    "_note": "Applicable for residents/NRIs with capital gains, multiple properties, foreign assets, or income > 50L.",
+    "eligible_income_sources": [
+      "salary", "multiple_house_properties", "capital_gains",
+      "other_sources", "foreign_assets", "foreign_income"
+    ],
+    "schedule_checklist_defaults": {
+      "schedule_salary": "PENDING",
+      "schedule_house_property": "PENDING",
+      "schedule_capital_gains": "PENDING",
+      "schedule_other_sources": "PENDING",
+      "schedule_foreign_assets": "PENDING",
+      "schedule_via_deductions": "PENDING"
+    },
+    "stcg_rate": 0.15,
+    "ltcg_rate": 0.10,
+    "ltcg_exemption": 100000
+  }
 }

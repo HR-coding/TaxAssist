@@ -1,9 +1,20 @@
 .env
+env.txt
 venv/
 uploads/
 __pycache__/
-credentials/
+**/__pycache__/
+*.pyc
+*.pyo
+# Google OAuth secrets — never commit these
+credentials.json
 client_secret.json
 token.json
 *.zip
 *.db
+mock_drive/
+temp/
+.pytest_cache/
+*.egg-info/
+dist/
+build/

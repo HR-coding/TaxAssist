@@ -1,311 +1,127 @@
-from app.tools.document_processor import (
-    process_document
+import logging
+from datetime import datetime as _dt
+from app.mcps.state_mcp import check_state_mcp, write_state_mcp
+from app.services.workspace_orchestrator import (
+    sync_google_drive, dispatch_gmail_notifications, plan_calendar_schedule
 )
+from app.services.pii_vault import anonymize_document
+from app.services.itr_service import get_itr, create_itr, update_itr
+from app.services.itr_mapper import map_document_to_itr
+from app.tools.itr1_calculator import calculate_itr1_tax
+from app.tools.itr2_calculator import calculate_itr2_tax
 
-from app.tools.document_classifier import (
-    classify_document
-)
-
-from app.tools.document_validator import (
-    validate_document
-)
-
-from app.tools.review_engine import (
-    requires_review
-)
-
-from app.services.data_lineage import (
-    build_lineage
-)
-
-from app.services.reconciliation_service import (
-    reconcile_documents
-)
-
-from app.services.pii_vault import (
-    anonymize_document
-)
-
-from app.tools.tax_rules import (
-    retrieve_tax_rules
-)
-
-from app.tools.itr1_calculator import (
-    calculate_itr1_tax
-)
-
-from app.services.itr_mapper import (
-    map_document_to_itr
-)
-
-from app.tools.gmail_client import (
-    send_email
-)
-
-from app.tools.calendar_client import (
-    create_tax_reminder
-)
+logger = logging.getLogger("orchestrator")
 
 
-def execute_workflow(
-    document_text
-):
+def execute_workflow(user_id: str, document_data: dict = None, to_email: str = None,
+                     itr_type: str = "ITR1") -> dict:
+    """
+    Main orchestrator.
 
-    classification_result = (
-        classify_document(
-            document_text
-        )
+    STEP 0 (Mandatory): State Management MCP check FIRST.
+    STEP 1: Drive sync (OCR extraction on new PDFs)
+    STEP 2: PII anonymisation → ITR mapping
+    STEP 3: State write-back
+    STEP 4: Notifications (Gmail + Calendar)
+    STEP 5: Deterministic tax calculation (only when all docs verified)
+    """
+    logger.info(f"[{user_id}] Starting tax workflow (itr_type={itr_type})")
+
+    # ── STEP 0: Mandatory state check ─────────────────────────────────────
+    state_snapshot = check_state_mcp(user_id)
+    logger.info(
+        f"[{user_id}] Stage={state_snapshot['current_portal_stage']} | "
+        f"next={state_snapshot['next_action']}"
     )
 
-    document_data = (
-        process_document(
-            document_text
-        )
-    )
-
-    privacy_result = (
-        anonymize_document(
-            document_data
-        )
-    )
-
-    anonymized_document = (
-        privacy_result[
-            "anonymized"
-        ]
-    )
-
-    vault = (
-        privacy_result[
-            "vault"
-        ]
-    )
-
-    validation_result = (
-        validate_document(
-            document_data
-        )
-    )
-
-    review_result = (
-        requires_review(
-            document_data
-        )
-    )
-
-    lineage = (
-        build_lineage(
-            anonymized_document,
-            "FORM16_001"
-        )
-    )
-
-    reconciliation_result = (
-        reconcile_documents(
-            [document_data]
-        )
-    )
-
-    itr_data = (
-        map_document_to_itr(
-            anonymized_document,
-            "FORM16_001"
-        )
-    )
-
-    tax_rules = (
-        retrieve_tax_rules()
-    )
-
-    tax_result = (
-        calculate_itr1_tax(
-            document_data
-        )
-    )
-
-    itr_data[
-        "tax_summary"
-    ] = tax_result
-
-    audit_trail = [
-
-        {
-            "step":
-            "DOCUMENT_CLASSIFIED",
-
-            "status":
-            classification_result[
-                "document_type"
-            ]
-        },
-
-        {
-            "step":
-            "DOCUMENT_EXTRACTED",
-
-            "status":
-            "SUCCESS"
-        },
-
-        {
-            "step":
-            "PII_ANONYMIZED",
-
-            "status":
-            "SUCCESS"
-        },
-
-        {
-            "step":
-            "DOCUMENT_VALIDATED",
-
-            "status":
-            validation_result[
-                "status"
-            ]
-        },
-
-        {
-            "step":
-            "HUMAN_REVIEW_CHECK",
-
-            "status":
-            str(
-                review_result[
-                    "requires_review"
-                ]
-            )
-        },
-
-        {
-            "step":
-            "DATA_LINEAGE_CREATED",
-
-            "status":
-            "SUCCESS"
-        },
-
-        {
-            "step":
-            "ITR_MAPPED",
-
-            "status":
-            "SUCCESS"
-        },
-
-        {
-            "step":
-            "TAX_CALCULATED",
-
-            "status":
-            "SUCCESS"
+    unmet = state_snapshot.get("unmet_dependencies", [])
+    if unmet and not document_data:
+        logger.warning(f"[{user_id}] Halting — unmet dependencies: {unmet}")
+        return {
+            "status": "halted",
+            "reason": "unmet_dependencies",
+            "unmet_dependencies": unmet,
+            "next_action": state_snapshot["next_action"],
+            "notification": state_snapshot["notification"]
         }
-    ]
 
-    email_status = (
-        "NOT_SENT"
-    )
-
-    calendar_result = None
-
+    # ── STEP 1: Drive sync ────────────────────────────────────────────────
     try:
-
-        send_email(
-
-            "nihalmouni29@gmail.com",
-
-            "ITR Summary",
-
-            str(
-                tax_result
-            )
-        )
-
-        email_status = (
-            "SENT"
-        )
-
-        audit_trail.append(
-
-            {
-                "step":
-                "EMAIL_SENT",
-
-                "status":
-                "SUCCESS"
-            }
-        )
-
+        sync_google_drive(user_id)
     except Exception as e:
+        logger.warning(f"[{user_id}] Drive sync skipped: {e}")
 
-        email_status = str(e)
+    # ── STEP 2: PII anonymisation & ITR mapping ───────────────────────────
+    anonymized_data = None
+    vault = None
 
-    try:
+    if document_data:
+        res = anonymize_document(document_data)
+        anonymized_data = res["anonymized"]
+        vault = res["vault"]
 
-        calendar_result = (
-            create_tax_reminder()
-        )
+        itr = get_itr(user_id)
+        if not itr:
+            itr = create_itr(user_id, itr_type=itr_type)
 
-        audit_trail.append(
+        effective_itr_type = itr.get("itr_type", itr_type)
+        if effective_itr_type in ("ITR2", "ITR-2"):
+            update_itr(user_id, anonymized_data)
+        else:
+            mapped = map_document_to_itr(anonymized_data, source_doc_id="FORM16_001")
+            update_itr(user_id, mapped)
 
-            {
-                "step":
-                "CALENDAR_CREATED",
+        # Write state transition back immediately
+        write_state_mcp(user_id, {
+            "schedule_checklist.income_from_salary.status": "UNVERIFIED UPLOAD"
+        })
 
-                "status":
-                "SUCCESS"
-            }
-        )
+    # ── STEP 3: Re-evaluate state ─────────────────────────────────────────
+    state_snapshot = check_state_mcp(user_id)
+    itr_record = get_itr(user_id)
+    effective_itr_type = itr_record.get("itr_type", itr_type) if itr_record else itr_type
+    routing_res = state_snapshot["next_action"]
+    write_state_mcp(user_id, {"last_orchestrator_run": _dt.utcnow().isoformat() + "Z"})
 
-    except Exception as e:
+    # ── STEP 4: Notifications ─────────────────────────────────────────────
+    notification = state_snapshot.get("notification", {})
+    if to_email and notification.get("type") not in (None, "NONE"):
+        try:
+            dispatch_gmail_notifications(user_id, to_email)
+        except Exception as e:
+            logger.warning(f"[{user_id}] Gmail dispatch skipped: {e}")
+        try:
+            plan_calendar_schedule(user_id)
+        except Exception as e:
+            logger.warning(f"[{user_id}] Calendar planning skipped: {e}")
 
-        calendar_result = {
+    # ── STEP 5: Tax calculation (only when all docs verified) ─────────────
+    tax_result = {}
+    updated_itr = get_itr(user_id) or {}
+    unmet_now = state_snapshot.get("unmet_dependencies", [])
+    doc_pending = [u for u in unmet_now if u.startswith("document_pending:")]
 
-            "error":
-            str(e)
-        }
+    if not doc_pending:
+        if effective_itr_type in ("ITR2", "ITR-2"):
+            tax_result = calculate_itr2_tax(updated_itr)
+        else:
+            tax_result = calculate_itr1_tax(updated_itr)
+        update_itr(user_id, {"tax_summary": tax_result})
+        write_state_mcp(user_id, {
+            "portal_validation_milestones.gross_total_income_computed": True,
+            "portal_validation_milestones.part_b_tti_tax_liability_finalized": True
+        })
+    else:
+        logger.info(f"[{user_id}] Tax calc deferred — pending docs: {doc_pending}")
 
     return {
-
-        "document_classification":
-            classification_result,
-
-        "validation_result":
-            validation_result,
-
-        "review_result":
-            review_result,
-
-        "privacy_layer":
-            vault,
-
-        "anonymized_document":
-            anonymized_document,
-
-        "data_lineage":
-            lineage,
-
-        "reconciliation_result":
-            reconciliation_result,
-
-        "audit_trail":
-            audit_trail,
-
-        "document_processing":
-            document_data,
-
-        "itr_data":
-            itr_data,
-
-        "tax_rules":
-            tax_rules,
-
-        "tax_result":
-            tax_result,
-
-        "email_status":
-            email_status,
-
-        "calendar_result":
-            calendar_result
+        "status": "success",
+        "itr_type": effective_itr_type,
+        "routing": routing_res,
+        "tax_result": tax_result,
+        "anonymized_data": anonymized_data,
+        "vault": vault,
+        "state_snapshot": state_snapshot
     }
+
+

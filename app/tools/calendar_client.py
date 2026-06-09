@@ -1,25 +1,8 @@
-from googleapiclient.discovery import (
-    build
-)
-
 from datetime import (
     datetime,
     timedelta
 )
-
-from app.tools.google_auth import (
-    get_credentials
-)
-
-
-def get_calendar_service():
-
-    return build(
-        "calendar",
-        "v3",
-        credentials=get_credentials()
-    )
-
+from app.utils.google_auth import get_calendar_service
 
 def create_tax_reminder():
 
