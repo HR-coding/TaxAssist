@@ -12,16 +12,15 @@ from app.mcps.document_mcp import (
     process_document_mcp, apply_extraction_mcp, register_document_mcp, get_document_mcp
 )
 from app.mcps.tax_rules_mcp import retrieve_tax_rules_mcp
-from app.mcps.workflow_mcp import update_workflow_mcp, get_workflow_state_mcp
 from app.mcps.sheets_mcp import (
     read_unvouched_transactions_mcp,
     write_unvouched_transaction_mcp,
     update_verified_transaction_mcp,
 )
-from app.mcps.tools.itr1_calculator import calculate_itr1_tax
-from app.mcps.tools.itr2_calculator import calculate_itr2_tax
-from app.mcps.tools.gmail_client import send_email
-from app.mcps.tools.calendar_client import create_tax_reminder
+from app.core.itr1_calculator import calculate_itr1_tax
+from app.core.itr2_calculator import calculate_itr2_tax
+from app.core.gmail_client import send_email
+from app.core.calendar_client import create_tax_reminder
 
 
 # ─────────────────────────────────────────────
@@ -223,37 +222,6 @@ def calculate_itr2_tax_tool(itr2_data: dict) -> dict:
 
 
 # ─────────────────────────────────────────────
-# WORKFLOW STATE TOOLS
-# ─────────────────────────────────────────────
-
-def update_workflow_tool(user_id: str, status: str) -> dict:
-    """
-    Update the workflow_status field on the user's state record.
-
-    Args:
-        user_id: Unique identifier for the taxpayer.
-        status: New workflow status string.
-
-    Returns:
-        Confirmation dict.
-    """
-    return update_workflow_mcp(user_id, status)
-
-
-def get_workflow_state_tool(user_id: str) -> dict:
-    """
-    Get the current workflow state and evaluated next action.
-
-    Args:
-        user_id: Unique identifier for the taxpayer.
-
-    Returns:
-        Full state snapshot including next_action recommendation.
-    """
-    return get_workflow_state_mcp(user_id)
-
-
-# ─────────────────────────────────────────────
 # GOOGLE SHEETS TOOLS (unvouched transactions)
 # ─────────────────────────────────────────────
 
@@ -373,8 +341,6 @@ ALL_TOOLS = [
     retrieve_tax_rules_tool,
     calculate_itr1_tax_tool,
     calculate_itr2_tax_tool,
-    update_workflow_tool,
-    get_workflow_state_tool,
     read_unvouched_transactions_tool,
     write_unvouched_transaction_tool,
     update_verified_transaction_tool,

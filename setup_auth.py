@@ -8,7 +8,7 @@ It will open your browser, ask you to log in with the Google account that owns
 the Drive folder / Gmail / Calendar / Sheets, and save token.json at the project
 root. The server reads token.json on every subsequent run (auto-refreshing silently).
 """
-from app.mcps.utils.google_auth import get_or_create_credentials, TOKEN_FILE
+from app.core.google_auth import get_or_create_credentials, TOKEN_FILE
 
 if __name__ == "__main__":
     print("Starting Google OAuth flow...")

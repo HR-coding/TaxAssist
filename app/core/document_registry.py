@@ -1,5 +1,5 @@
-from app.mcps.services.db import db
-from app.mcps.models.registry import DocumentRegistry, RegistryStatus
+from app.core.db import db
+from app.core.registry import DocumentRegistry, RegistryStatus
 from datetime import datetime
 import uuid
 

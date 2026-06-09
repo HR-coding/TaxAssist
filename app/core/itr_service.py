@@ -1,7 +1,7 @@
 from datetime import datetime
-from app.mcps.services.db import db
-from app.mcps.models.tax_ledger import ITR1Ledger, ITR2Ledger
-from app.mcps.services.field_calculator import compute_calculated_fields
+from app.core.db import db
+from app.core.tax_ledger import ITR1Ledger, ITR2Ledger
+from app.core.field_calculator import compute_calculated_fields
 
 
 def create_itr(user_id: str, itr_type: str = "ITR1") -> dict:

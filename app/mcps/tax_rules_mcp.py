@@ -1,7 +1,7 @@
 import json
 import os
 
-_TAX_RULES_PATH = os.path.join(os.path.dirname(__file__), "data", "tax_rules.json")
+_TAX_RULES_PATH = os.path.join(os.path.dirname(__file__), "..", "core", "tax_rules.json")
 
 
 def retrieve_tax_rules_mcp(regime: str = "new", itr_type: str = "ITR1") -> dict:

@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 class TestITR1Models(unittest.TestCase):
     def test_defaults(self):
-        from app.mcps.models.tax_ledger import ITR1Ledger
+        from app.core.tax_ledger import ITR1Ledger
         itr = ITR1Ledger(user_id="u1")
         self.assertEqual(itr.salary_income.standard_deduction.value, 50000)
         self.assertEqual(itr.salary_income.standard_deduction.source_doc_id, "SYSTEM_DEFAULT")
@@ -32,21 +32,21 @@ class TestITR1Models(unittest.TestCase):
         self.assertEqual(itr.tax_regime, "NEW")
 
     def test_deductions_are_lists(self):
-        from app.mcps.models.tax_ledger import ITR1Ledger
+        from app.core.tax_ledger import ITR1Ledger
         itr = ITR1Ledger(user_id="u1")
         self.assertIsInstance(itr.deductions.sec_80c, list)
         self.assertIsInstance(itr.deductions.sec_80d, list)
         self.assertIsInstance(itr.deductions.sec_80g, list)
 
     def test_taxes_paid_are_lists(self):
-        from app.mcps.models.tax_ledger import ITR1Ledger
+        from app.core.tax_ledger import ITR1Ledger
         itr = ITR1Ledger(user_id="u1")
         self.assertIsInstance(itr.taxes_paid.advance_tax, list)
         self.assertIsInstance(itr.taxes_paid.tds_on_salary, list)
         self.assertEqual(itr.taxes_paid.total_taxes_paid.source_doc_id, "CALCULATED_FIELD")
 
     def test_other_sources_are_lists(self):
-        from app.mcps.models.tax_ledger import ITR1Ledger
+        from app.core.tax_ledger import ITR1Ledger
         itr = ITR1Ledger(user_id="u1")
         self.assertIsInstance(itr.other_sources.savings_interest, list)
         self.assertIsInstance(itr.other_sources.deposit_interest, list)
@@ -55,20 +55,20 @@ class TestITR1Models(unittest.TestCase):
 
 class TestITR2Models(unittest.TestCase):
     def test_vda_and_cfl_present(self):
-        from app.mcps.models.tax_ledger import ITR2Ledger
+        from app.core.tax_ledger import ITR2Ledger
         itr = ITR2Ledger(user_id="u2")
         self.assertIsNotNone(itr.schedule_vda)
         self.assertIsNotNone(itr.schedule_cfl)
         self.assertEqual(itr.schedule_vda.total_vda_income.source_doc_id, "CALCULATED_FIELD")
 
     def test_capital_gains_totals_calculated(self):
-        from app.mcps.models.tax_ledger import ITR2Ledger
+        from app.core.tax_ledger import ITR2Ledger
         itr = ITR2Ledger(user_id="u2")
         self.assertEqual(itr.schedule_capital_gains.total_short_term_cg.source_doc_id, "CALCULATED_FIELD")
         self.assertEqual(itr.schedule_capital_gains.total_long_term_cg.source_doc_id, "CALCULATED_FIELD")
 
     def test_foreign_assets_structured(self):
-        from app.mcps.models.tax_ledger import ITR2Ledger
+        from app.core.tax_ledger import ITR2Ledger
         itr = ITR2Ledger(user_id="u2")
         self.assertIsInstance(itr.schedule_foreign_assets.foreign_bank_accounts, list)
         self.assertIsInstance(itr.schedule_foreign_assets.foreign_equity_holdings, list)
@@ -77,7 +77,7 @@ class TestITR2Models(unittest.TestCase):
 
 class TestStateModels(unittest.TestCase):
     def test_itr1_checklist_defaults(self):
-        from app.mcps.models.state import ITR1_CHECKLIST_DEFAULTS
+        from app.core.state import ITR1_CHECKLIST_DEFAULTS
         self.assertIn("income_from_salary", ITR1_CHECKLIST_DEFAULTS)
         self.assertIn("income_from_one_house_property", ITR1_CHECKLIST_DEFAULTS)
         self.assertIn("schedule_via_deductions", ITR1_CHECKLIST_DEFAULTS)
@@ -85,7 +85,7 @@ class TestStateModels(unittest.TestCase):
         self.assertEqual(len(ITR1_CHECKLIST_DEFAULTS), 5)
 
     def test_itr2_checklist_defaults(self):
-        from app.mcps.models.state import ITR2_CHECKLIST_DEFAULTS
+        from app.core.state import ITR2_CHECKLIST_DEFAULTS
         self.assertIn("schedule_s_salary", ITR2_CHECKLIST_DEFAULTS)
         self.assertIn("schedule_cg_capital_gains", ITR2_CHECKLIST_DEFAULTS)
         self.assertIn("schedule_vda_virtual_digital_assets", ITR2_CHECKLIST_DEFAULTS)
@@ -93,7 +93,7 @@ class TestStateModels(unittest.TestCase):
         self.assertEqual(len(ITR2_CHECKLIST_DEFAULTS), 10)
 
     def test_notification_context_metadata(self):
-        from app.mcps.models.state import NotificationBlock, ContextMetadata
+        from app.core.state import NotificationBlock, ContextMetadata
         nb = NotificationBlock(
             type="VERIFY",
             reason_code="DOCUMENT_VARIANCE",
@@ -114,11 +114,11 @@ class TestStateModels(unittest.TestCase):
 
 class TestFieldCalculatorITR1(unittest.TestCase):
     def _base_itr1(self):
-        from app.mcps.models.tax_ledger import ITR1Ledger
+        from app.core.tax_ledger import ITR1Ledger
         return ITR1Ledger(user_id="u1").model_dump(by_alias=True)
 
     def test_net_salary_income(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["salary_income"]["gross_salary"]["value"] = 1200000.0
         calcs = compute_calculated_fields(doc)
@@ -126,7 +126,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["salary_income.net_salary_income.value"], 1150000.0)
 
     def test_net_salary_with_professional_tax(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["salary_income"]["gross_salary"]["value"] = 1000000.0
         doc["salary_income"]["professional_tax"]["value"] = 2500.0
@@ -135,7 +135,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["salary_income.net_salary_income.value"], 947500.0)
 
     def test_house_property_let_out(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["house_property"]["property_type"] = "LET_OUT"
         doc["house_property"]["gross_rent_received"]["value"] = 400000.0
@@ -147,7 +147,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["house_property.net_house_property_income.value"], 152000.0)
 
     def test_house_property_self_occupied_caps_loss(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["house_property"]["property_type"] = "SELF_OCCUPIED"
         doc["house_property"]["interest_on_borrowed_capital"]["value"] = 350000.0  # > 2L cap
@@ -156,7 +156,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["house_property.net_house_property_income.value"], -200000.0)  # capped
 
     def test_sec_80tta_capped_at_10000(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["other_sources"]["savings_interest"] = [
             {"value": 8000.0, "description": "SBI"},
@@ -166,7 +166,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["deductions.sec_80tta.value"], 10000.0)  # capped at 10K
 
     def test_total_taxes_paid_multi_entry(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["taxes_paid"]["tds_on_salary"] = [{"value": 80000.0}, {"value": 20000.0}]
         doc["taxes_paid"]["advance_tax"] = [{"value": 15000.0}]
@@ -175,7 +175,7 @@ class TestFieldCalculatorITR1(unittest.TestCase):
         self.assertEqual(calcs["taxes_paid.total_taxes_paid.value"], 120000.0)
 
     def test_net_other_sources_includes_all_streams(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr1()
         doc["other_sources"]["savings_interest"] = [{"value": 5000.0}]
         doc["other_sources"]["deposit_interest"] = [{"value": 20000.0}]
@@ -188,11 +188,11 @@ class TestFieldCalculatorITR1(unittest.TestCase):
 
 class TestFieldCalculatorITR2(unittest.TestCase):
     def _base_itr2(self):
-        from app.mcps.models.tax_ledger import ITR2Ledger
+        from app.core.tax_ledger import ITR2Ledger
         return ITR2Ledger(user_id="u2").model_dump(by_alias=True)
 
     def test_net_employer_income_per_item(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr2()
         doc["schedule_salary"] = [{
             "employer_name": "Acme Corp",
@@ -207,7 +207,7 @@ class TestFieldCalculatorITR2(unittest.TestCase):
         self.assertEqual(calcs["schedule_salary.0.net_employer_income"], 1400000.0)
 
     def test_capital_gain_item_computed(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr2()
         doc["schedule_capital_gains"]["short_term_gains"] = [{
             "full_value_of_consideration": 200000.0,
@@ -221,7 +221,7 @@ class TestFieldCalculatorITR2(unittest.TestCase):
         self.assertEqual(calcs["schedule_capital_gains.total_short_term_cg.value"], 85000.0)
 
     def test_vda_income_per_transaction(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr2()
         doc["schedule_vda"]["transactions"] = [
             {"asset_name": "BTC", "consideration_received": 500000.0, "cost_of_acquisition": 300000.0},
@@ -233,7 +233,7 @@ class TestFieldCalculatorITR2(unittest.TestCase):
         self.assertEqual(calcs["schedule_vda.total_vda_income.value"], 250000.0)
 
     def test_house_property_let_out_itr2(self):
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         doc = self._base_itr2()
         doc["schedule_house_property"] = [{
             "property_type": "LET_OUT",
@@ -400,7 +400,7 @@ def _itr1_doc(gross_salary, tax_regime="NEW", savings=0, fd=0, dividend=0,
 
 class TestITR1Calculator(unittest.TestCase):
     def test_new_regime_10l_no_deductions(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         res = calculate_itr1_tax(_itr1_doc(1000000))
         # net_salary = 1000000 - 75000 = 925000
         self.assertEqual(res["gross_total_income"], 925000.0)
@@ -408,20 +408,20 @@ class TestITR1Calculator(unittest.TestCase):
         self.assertGreater(res["tax_liability"], 0)
 
     def test_new_regime_7l_full_87a_rebate(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         # 700K - 75K std = 625K taxable → tax = (625K-600K)*10% + (600K-300K)*5%
         # = 2500 + 15000 = 17500 < 25000 rebate → full rebate → 0
         res = calculate_itr1_tax(_itr1_doc(700000))
         self.assertEqual(res["net_tax_payable"], 0.0)
 
     def test_new_regime_partial_87a_rebate(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         # 800K gross - 75K = 725K taxable > 700K rebate limit → no rebate applies
         res = calculate_itr1_tax(_itr1_doc(800000))
         self.assertGreater(res["net_tax_payable"], 0.0)
 
     def test_old_regime_with_full_deductions(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         res = calculate_itr1_tax(_itr1_doc(
             1000000, tax_regime="OLD",
             savings=15000, d80c=150000, d80d=25000, d80ccd1b=50000, tds=100000
@@ -436,8 +436,8 @@ class TestITR1Calculator(unittest.TestCase):
         self.assertEqual(res["net_tax_payable"], 0.0)
 
     def test_old_regime_80c_cap(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.itr1_calculator import calculate_itr1_tax
+        from app.core.field_calculator import compute_calculated_fields
         doc = _itr1_doc(1200000, tax_regime="OLD", d80c=200000)  # exceeds 1.5L cap
         doc["itr_type"] = "ITR1"
         calcs = compute_calculated_fields(doc)
@@ -445,16 +445,16 @@ class TestITR1Calculator(unittest.TestCase):
         self.assertLessEqual(calcs["deductions.total_chapter_via_deductions.value"], 150000.0)
 
     def test_refund_when_tds_exceeds_tax(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         res = calculate_itr1_tax(_itr1_doc(500000, tax_regime="NEW", tds=50000))
         # 500K - 75K = 425K, tax = (425K-300K)*5%=6250 +4%cess=6500, tds=50000 → refund
         self.assertGreater(res["refund_due"], 0.0)
         self.assertEqual(res["net_tax_payable"], 0.0)
 
     def test_house_property_income_adds_to_gti(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         doc = _itr1_doc(800000, hp_type="LET_OUT", hp_rent=300000, hp_mun=30000, hp_interest=50000)
-        from app.mcps.services.field_calculator import compute_calculated_fields
+        from app.core.field_calculator import compute_calculated_fields
         calcs = compute_calculated_fields(doc)
         doc["house_property"]["net_house_property_income"] = {
             "value": calcs["house_property.net_house_property_income.value"]
@@ -467,7 +467,7 @@ class TestITR1Calculator(unittest.TestCase):
         self.assertGreater(res["gross_total_income"], 700000)  # salary + hp
 
     def test_tds_other_than_salary_counted(self):
-        from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+        from app.core.itr1_calculator import calculate_itr1_tax
         doc = _itr1_doc(1000000, tax_regime="NEW")
         doc["taxes_paid"]["tds_other_than_salary"] = [{"value": 5000, "deductor_tan": "ABCD01234E"}]
         res = calculate_itr1_tax(doc)
@@ -494,27 +494,27 @@ class TestITR2Calculator(unittest.TestCase):
         }
 
     def test_basic_salary_only(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         res = calculate_itr2_tax(self._full_itr2(salary=2000000, hp_income=0, other=0,
                                                   deductions=0, taxes_paid=0))
         self.assertEqual(res["gross_total_income"], 2000000.0)
         self.assertGreater(res["tax_liability"], 0)
 
     def test_stcg_taxed_at_15_percent(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         # High income so regular income tax + STCG@15%
         res = calculate_itr2_tax(self._full_itr2(stcg=100000, taxes_paid=0))
         # Check STCG is included in gross
         self.assertEqual(res["stcg"], 100000.0)
 
     def test_ltcg_1l_exemption(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         # LTCG = 250000, exempt 100000, taxable LTCG = 150000
         res = calculate_itr2_tax(self._full_itr2(ltcg=250000, taxes_paid=0))
         self.assertEqual(res["ltcg"], 150000.0)  # after 1L exemption
 
     def test_vda_taxed_at_30_percent(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         # VDA income taxed at flat 30% (Sec 115BBH) — not subject to regular slabs
         res_with_vda = calculate_itr2_tax(self._full_itr2(vda=100000, taxes_paid=0))
         res_without_vda = calculate_itr2_tax(self._full_itr2(vda=0, taxes_paid=0))
@@ -523,13 +523,13 @@ class TestITR2Calculator(unittest.TestCase):
         self.assertAlmostEqual(diff, 31200.0, delta=1.0)
 
     def test_refund_when_tds_exceeds(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         res = calculate_itr2_tax(self._full_itr2(salary=1000000, taxes_paid=500000,
                                                    deductions=0, other=0))
         self.assertGreater(res["refund_due"], 0.0)
 
     def test_multiple_employers_summed(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         doc = self._full_itr2(taxes_paid=0, deductions=0, other=0, hp_income=0)
         doc["schedule_salary"] = [
             {"net_employer_income": 1200000},
@@ -539,7 +539,7 @@ class TestITR2Calculator(unittest.TestCase):
         self.assertEqual(res["gross_total_income"], 2000000.0)
 
     def test_deductions_reduce_taxable_income(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         res_no_ded = calculate_itr2_tax(self._full_itr2(deductions=0, taxes_paid=0))
         res_with_ded = calculate_itr2_tax(self._full_itr2(deductions=200000, taxes_paid=0))
         self.assertLess(res_with_ded["taxable_income"], res_no_ded["taxable_income"])
@@ -552,7 +552,7 @@ class TestITR2Calculator(unittest.TestCase):
 
 class TestPIIVault(unittest.TestCase):
     def test_name_and_pan_replaced(self):
-        from app.mcps.services.pii_vault import anonymize_document
+        from app.core.pii_vault import anonymize_document
         doc = {"employee_name": "Harish Kumar", "pan_number": "ABCDE1234F", "gross_salary": 900000}
         res = anonymize_document(doc)
         anon = res["anonymized"]
@@ -564,13 +564,13 @@ class TestPIIVault(unittest.TestCase):
         self.assertIn("ABCDE1234F", vault.values())
 
     def test_financial_values_unchanged(self):
-        from app.mcps.services.pii_vault import anonymize_document
+        from app.core.pii_vault import anonymize_document
         doc = {"employee_name": "Test", "pan_number": "X", "gross_salary": 1200000}
         res = anonymize_document(doc)
         self.assertEqual(res["anonymized"]["gross_salary"], 1200000)
 
     def test_vault_is_reversible(self):
-        from app.mcps.services.pii_vault import anonymize_document
+        from app.core.pii_vault import anonymize_document
         doc = {"employee_name": "Rahul Sharma", "pan_number": "PQRST5678G", "gross_salary": 0}
         res = anonymize_document(doc)
         token = res["anonymized"]["employee_name"]
@@ -592,14 +592,14 @@ class TestStateTrackerService(unittest.TestCase):
         mock_db.state_tracker.update_one.side_effect = lambda q, u, **kw: self.updated.update(
             u.get("$set", {})) or MagicMock()
 
-        self.patcher = patch("app.mcps.services.state_tracker_service.db", mock_db)
+        self.patcher = patch("app.core.state_tracker_service.db", mock_db)
         self.patcher.start()
 
     def tearDown(self):
         self.patcher.stop()
 
     def test_create_itr1_state_has_correct_defaults(self):
-        from app.mcps.services.state_tracker_service import create_state
+        from app.core.state_tracker_service import create_state
         state = create_state("usr_101", itr_type="ITR1")
         self.assertEqual(state["itr_type"], "ITR1")
         self.assertIn("income_from_salary", state["schedule_checklist"])
@@ -610,7 +610,7 @@ class TestStateTrackerService(unittest.TestCase):
         self.assertNotIn("part_b_ti_total_income_computed", state["portal_validation_milestones"])
 
     def test_create_itr2_state_has_correct_defaults(self):
-        from app.mcps.services.state_tracker_service import create_state
+        from app.core.state_tracker_service import create_state
         state = create_state("usr_102", itr_type="ITR2")
         self.assertEqual(state["itr_type"], "ITR2")
         self.assertIn("schedule_s_salary", state["schedule_checklist"])
@@ -621,8 +621,8 @@ class TestStateTrackerService(unittest.TestCase):
         self.assertNotIn("gross_total_income_computed", state["portal_validation_milestones"])
 
     def test_update_state_writes_back(self):
-        from app.mcps.services.state_tracker_service import update_state
-        with patch("app.mcps.services.state_tracker_service.db") as mock_db:
+        from app.core.state_tracker_service import update_state
+        with patch("app.core.state_tracker_service.db") as mock_db:
             update_state("usr_101", {"current_portal_stage": "VALIDATING_INCOME"})
             mock_db.state_tracker.update_one.assert_called_once()
             args = mock_db.state_tracker.update_one.call_args
@@ -636,20 +636,20 @@ class TestStateTrackerService(unittest.TestCase):
 
 class TestITRService(unittest.TestCase):
     def test_create_itr1_uses_correct_ledger(self):
-        with patch("app.mcps.services.itr_service.db") as mock_db, \
-             patch("app.mcps.services.itr_service.compute_calculated_fields", return_value={}):
+        with patch("app.core.itr_service.db") as mock_db, \
+             patch("app.core.itr_service.compute_calculated_fields", return_value={}):
             mock_db.itr_records.insert_one.return_value = MagicMock()
-            from app.mcps.services.itr_service import create_itr
+            from app.core.itr_service import create_itr
             doc = create_itr("u1", "ITR1")
             self.assertEqual(doc["itr_type"], "ITR1")
             self.assertIn("salary_income", doc)
             self.assertIn("other_sources", doc)
 
     def test_create_itr2_uses_correct_ledger(self):
-        with patch("app.mcps.services.itr_service.db") as mock_db, \
-             patch("app.mcps.services.itr_service.compute_calculated_fields", return_value={}):
+        with patch("app.core.itr_service.db") as mock_db, \
+             patch("app.core.itr_service.compute_calculated_fields", return_value={}):
             mock_db.itr_records.insert_one.return_value = MagicMock()
-            from app.mcps.services.itr_service import create_itr
+            from app.core.itr_service import create_itr
             doc = create_itr("u2", "ITR2")
             self.assertEqual(doc["itr_type"], "ITR2")
             self.assertIn("schedule_salary", doc)
@@ -662,10 +662,10 @@ class TestITRService(unittest.TestCase):
             "house_property": {"property_type": "SELF_OCCUPIED"},
             "other_sources": {}, "deductions": {}, "taxes_paid": {}
         }
-        with patch("app.mcps.services.itr_service.db") as mock_db, \
-             patch("app.mcps.services.itr_service.compute_calculated_fields", return_value={"salary_income.net_salary_income.value": 725000}) as mock_calc:
+        with patch("app.core.itr_service.db") as mock_db, \
+             patch("app.core.itr_service.compute_calculated_fields", return_value={"salary_income.net_salary_income.value": 725000}) as mock_calc:
             mock_db.itr_records.find_one.return_value = mock_full_doc
-            from app.mcps.services.itr_service import update_itr
+            from app.core.itr_service import update_itr
             update_itr("u1", {"salary_income.gross_salary.value": 800000})
             mock_calc.assert_called_once_with(mock_full_doc)
             # Second update_one call should include the calculated value
@@ -685,8 +685,8 @@ class TestITRMapper(unittest.TestCase):
 
     def test_scalar_field_sets_value(self):
         # salary_income.gross_salary is a scalar NumericField — should call update_itr
-        with patch("app.mcps.services.itr_mapper.update_itr") as mock_update:
-            from app.mcps.services.itr_mapper import apply_extraction_to_itr
+        with patch("app.core.itr_mapper.update_itr") as mock_update:
+            from app.core.itr_mapper import apply_extraction_to_itr
             result = apply_extraction_to_itr("u1", {
                 "document_type": "FORM_16",
                 "financial_year": "2025-26",
@@ -705,9 +705,9 @@ class TestITRMapper(unittest.TestCase):
         # deductions.sec_80c is in _ARRAY_FIELD_PREFIXES — should $push to the list
         mock_db = MagicMock()
         mock_db.itr_records.find_one.return_value = None  # skip recalc
-        with patch("app.mcps.services.db.db", mock_db), \
-             patch("app.mcps.services.itr_mapper.update_itr"):
-            from app.mcps.services.itr_mapper import apply_extraction_to_itr
+        with patch("app.core.db.db", mock_db), \
+             patch("app.core.itr_mapper.update_itr"):
+            from app.core.itr_mapper import apply_extraction_to_itr
             apply_extraction_to_itr("u1", {
                 "document_type": "INVESTMENT_PROOF",
                 "financial_year": "2025-26",
@@ -823,7 +823,7 @@ class TestOrchestratorITR1(unittest.TestCase):
     """Full ITR-1 workflow: new user → no state → halt, then with doc."""
 
     def _build_state(self, prereqs_done=False, doc_verified=False, milestones_done=False):
-        from app.mcps.models.state import ITR1_CHECKLIST_DEFAULTS, ITR1_MILESTONE_DEFAULTS
+        from app.core.state import ITR1_CHECKLIST_DEFAULTS, ITR1_MILESTONE_DEFAULTS
         prereqs = {
             "pan_aadhaar_linking_status": {"status": "VERIFIED" if prereqs_done else "PENDING"},
             "bank_account_prevalidation": {"status": "VERIFIED" if prereqs_done else "PENDING"},
@@ -915,7 +915,7 @@ class TestOrchestratorITR2(unittest.TestCase):
     """Full ITR-2 workflow end-to-end."""
 
     def _build_itr2_state(self, all_verified=False):
-        from app.mcps.models.state import ITR2_CHECKLIST_DEFAULTS, ITR2_MILESTONE_DEFAULTS
+        from app.core.state import ITR2_CHECKLIST_DEFAULTS, ITR2_MILESTONE_DEFAULTS
         prereqs = {
             "pan_aadhaar_linking_status": {"status": "VERIFIED"},
             "bank_account_prevalidation": {"status": "VERIFIED"},
@@ -975,7 +975,7 @@ class TestOrchestratorITR2(unittest.TestCase):
         self.assertIn("ltcg", tr)
 
     def test_itr2_vda_zero_when_no_transactions(self):
-        from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+        from app.core.itr2_calculator import calculate_itr2_tax
         doc = {
             "itr_type": "ITR2", "tax_regime": "NEW",
             "schedule_salary": [{"net_employer_income": 1500000}],
@@ -999,7 +999,7 @@ class TestOrchestratorITR2(unittest.TestCase):
 
 class TestStateMCP(unittest.TestCase):
     def test_check_state_creates_if_missing(self):
-        from app.mcps.models.state import ITR1_CHECKLIST_DEFAULTS
+        from app.core.state import ITR1_CHECKLIST_DEFAULTS
         new_state = {
             "user_id": "u_new", "itr_type": "ITR1",
             "current_portal_stage": "PREREQUISITES",
@@ -1067,7 +1067,7 @@ class TestTaxRulesMCP(unittest.TestCase):
 class TestADKTools(unittest.TestCase):
     def test_all_tools_count(self):
         from app.orchestrator.tools import ALL_TOOLS
-        self.assertEqual(len(ALL_TOOLS), 16)
+        self.assertEqual(len(ALL_TOOLS), 14)
 
     def test_calculate_itr1_tax_tool_nested(self):
         from app.orchestrator.tools import calculate_itr1_tax_tool

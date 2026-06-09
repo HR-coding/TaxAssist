@@ -1,5 +1,5 @@
 import os
-from app.mcps.utils.google_auth import get_sheets_service
+from app.core.google_auth import get_sheets_service
 
 
 def read_unvouched_transactions(spreadsheet_id: str = None, range_name: str = "UnvouchedTransactions!A1:Z") -> dict:

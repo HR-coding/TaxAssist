@@ -3,8 +3,8 @@ import hmac
 import logging
 from fastapi import APIRouter, Header, HTTPException, status, Depends
 from pydantic import BaseModel
-from app.mcps.services.db import db
-from app.orchestrator.agent_decider import determine_next_action
+from app.core.db import db
+from app.orchestrator.decider import determine_next_action
 
 router = APIRouter()
 logger = logging.getLogger("gateway")

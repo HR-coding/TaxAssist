@@ -9,10 +9,10 @@ import logging
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
-from app.mcps.utils.google_auth import get_drive_service, get_gmail_service, get_calendar_service
-from app.mcps.services.db import db
-from app.mcps.services.copywriter import generate_channel_copy
-from app.mcps.models.registry import RegistryStatus
+from app.core.google_auth import get_drive_service, get_gmail_service, get_calendar_service
+from app.core.db import db
+from app.core.copywriter import generate_channel_copy
+from app.core.registry import RegistryStatus
 
 logger = logging.getLogger("workspace_orchestrator")
 
@@ -91,7 +91,7 @@ def _handle_new_file(service, user_id: str, drive_file: dict):
     # Only run OCR on PDFs for now
     if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
         try:
-            from app.mcps.tools.ocr_extractor import extract_financial_data
+            from app.core.ocr_extractor import extract_financial_data
             file_bytes = _download_file_bytes(service, file_id)
             result = extract_financial_data(file_bytes, file_id)
             extraction_result = result["extraction"]
@@ -101,7 +101,7 @@ def _handle_new_file(service, user_id: str, drive_file: dict):
             logger.warning(f"OCR failed for {filename}: {e}")
             doc_type = "UNKNOWN"
     else:
-        from app.mcps.tools.hash_generator import generate_hash
+        from app.core.hash_generator import generate_hash
         data_hash = generate_hash(filename)
         doc_type = "UNKNOWN"
 
@@ -196,7 +196,7 @@ def _handle_modified_file(service, user_id: str, drive_file: dict, existing_doc:
 
     if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
         try:
-            from app.mcps.tools.ocr_extractor import extract_financial_data
+            from app.core.ocr_extractor import extract_financial_data
             file_bytes = _download_file_bytes(service, file_id)
             result = extract_financial_data(file_bytes, file_id)
             new_extraction = result["extraction"]
@@ -205,7 +205,7 @@ def _handle_modified_file(service, user_id: str, drive_file: dict, existing_doc:
             logger.warning(f"Re-extraction failed for {filename}: {e}")
             return
     else:
-        from app.mcps.tools.hash_generator import generate_hash
+        from app.core.hash_generator import generate_hash
         new_hash = generate_hash(filename)
 
     if new_hash == stored_hash:

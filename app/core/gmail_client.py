@@ -1,6 +1,6 @@
 from email.mime.text import MIMEText
 import base64
-from app.mcps.utils.google_auth import get_gmail_service
+from app.core.google_auth import get_gmail_service
 
 def send_email(
     to_email,
