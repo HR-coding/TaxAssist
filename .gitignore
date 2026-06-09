@@ -13,7 +13,14 @@ token.json
 *.zip
 *.db
 mock_drive/
+**/mock_drive/
 temp/
+**/temp/
+*.png
+*.pdf
+*.docx
+structure.txt
+**/.adk/
 .pytest_cache/
 *.egg-info/
 dist/

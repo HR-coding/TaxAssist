@@ -1,4 +1,0 @@
-Employee Name: Rahul Sharma
-PAN: INVALID123
-Gross Salary: 1200000
-Tax Regime: OLD
