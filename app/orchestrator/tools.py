@@ -18,10 +18,10 @@ from app.mcps.sheets_mcp import (
     write_unvouched_transaction_mcp,
     update_verified_transaction_mcp,
 )
-from app.tools.itr1_calculator import calculate_itr1_tax
-from app.tools.itr2_calculator import calculate_itr2_tax
-from app.tools.gmail_client import send_email
-from app.tools.calendar_client import create_tax_reminder
+from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+from app.mcps.tools.itr2_calculator import calculate_itr2_tax
+from app.mcps.tools.gmail_client import send_email
+from app.mcps.tools.calendar_client import create_tax_reminder
 
 
 # ─────────────────────────────────────────────

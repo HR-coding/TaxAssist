@@ -2,7 +2,7 @@ from datetime import (
     datetime,
     timedelta
 )
-from app.utils.google_auth import get_calendar_service
+from app.mcps.utils.google_auth import get_calendar_service
 
 def create_tax_reminder():
 

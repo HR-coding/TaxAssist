@@ -14,7 +14,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive",

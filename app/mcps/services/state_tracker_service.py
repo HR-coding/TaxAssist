@@ -1,6 +1,6 @@
 from datetime import datetime
-from app.services.db import db
-from app.models.state import (
+from app.mcps.services.db import db
+from app.mcps.models.state import (
     StateTracker,
     ITR1_CHECKLIST_DEFAULTS,
     ITR2_CHECKLIST_DEFAULTS,

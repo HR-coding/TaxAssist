@@ -7,7 +7,7 @@ functions defined in adk/tools.py. They can be registered with any AI provider
 Gemini ADK is the primary orchestrator as required by the hackathon.
 """
 from google.adk import Agent
-from app.adk.tools import ALL_TOOLS
+from app.orchestrator.tools import ALL_TOOLS
 
 root_agent = Agent(
     name="tax_orchestrator",

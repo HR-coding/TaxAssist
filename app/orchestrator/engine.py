@@ -1,14 +1,14 @@
 import logging
 from datetime import datetime as _dt
 from app.mcps.state_mcp import check_state_mcp, write_state_mcp
-from app.services.workspace_orchestrator import (
+from app.mcps.services.workspace_orchestrator import (
     sync_google_drive, dispatch_gmail_notifications, plan_calendar_schedule
 )
-from app.services.pii_vault import anonymize_document
-from app.services.itr_service import get_itr, create_itr, update_itr
-from app.services.itr_mapper import map_document_to_itr
-from app.tools.itr1_calculator import calculate_itr1_tax
-from app.tools.itr2_calculator import calculate_itr2_tax
+from app.mcps.services.pii_vault import anonymize_document
+from app.mcps.services.itr_service import get_itr, create_itr, update_itr
+from app.mcps.services.itr_mapper import map_document_to_itr
+from app.mcps.tools.itr1_calculator import calculate_itr1_tax
+from app.mcps.tools.itr2_calculator import calculate_itr2_tax
 
 logger = logging.getLogger("orchestrator")
 

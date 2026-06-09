@@ -7,7 +7,7 @@ Field path rules (from schemas.jsonc):
 """
 import logging
 from datetime import datetime
-from app.services.itr_service import get_itr, update_itr
+from app.mcps.services.itr_service import get_itr, update_itr
 
 logger = logging.getLogger("itr_mapper")
 
@@ -101,8 +101,8 @@ def apply_extraction_to_itr(user_id: str, extraction_result: dict) -> dict:
     # Apply array appends
     if array_pushes:
         push_ops = {k: {"$each": v} for k, v in array_pushes.items()}
-        from app.services.db import db
-        from app.services.field_calculator import compute_calculated_fields
+        from app.mcps.services.db import db
+        from app.mcps.services.field_calculator import compute_calculated_fields
         db.itr_records.update_one(
             {"user_id": user_id},
             {"$push": push_ops, "$set": {"modified_at": datetime.utcnow()}}
@@ -129,7 +129,7 @@ def map_document_to_itr(document_data: dict, source_doc_id: str = "UNKNOWN") -> 
     an API payload) to an ITR-1 partial update dict.
     The top-level orchestrator calls this when document_data is provided manually.
     """
-    from app.models.tax_ledger import ITR1Ledger
+    from app.mcps.models.tax_ledger import ITR1Ledger
     itr = ITR1Ledger().model_dump(by_alias=True)
     itr["itr_type"] = "ITR1"
     itr["filing_status"] = "DRAFT"

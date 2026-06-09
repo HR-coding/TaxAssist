@@ -4,7 +4,7 @@ Source: https://www.incometaxindia.gov.in/
 
 Reads from the new schema structure (schemas.jsonc).
 """
-from app.services.field_calculator import _sum_list, _sum_nf_list, _nf
+from app.mcps.services.field_calculator import _sum_list, _sum_nf_list, _nf
 
 
 def calculate_itr2_tax(itr_doc: dict) -> dict:
@@ -83,7 +83,7 @@ def calculate_itr2_tax(itr_doc: dict) -> dict:
     if isinstance(svd, dict):
         total_deductions = _nf(svd, "total_chapter_via_deductions")
         if total_deductions == 0.0:
-            from app.services.field_calculator import _calc_total_via_deductions
+            from app.mcps.services.field_calculator import _calc_total_via_deductions
             sav_sum = _sum_nf_list(sos.get("savings_interest", []) if isinstance(sos, dict) else [])
             total_deductions = _calc_total_via_deductions(svd, sav_sum, 0.0)
 

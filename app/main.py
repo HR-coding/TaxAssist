@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api.gateway import router as gateway_router
-from app.services.db_initializer import initialize_database
+from app.orchestrator.gateway import router as gateway_router
+from app.mcps.services.db_initializer import initialize_database
 
 
 @asynccontextmanager

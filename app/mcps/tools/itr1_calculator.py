@@ -5,7 +5,7 @@ Source: https://www.incometaxindia.gov.in/
 Reads from the new array-based schema (schemas.jsonc).
 Supports both old and new tax regimes.
 """
-from app.services.field_calculator import _sum_list, _sum_nf_list, _nf
+from app.mcps.services.field_calculator import _sum_list, _sum_nf_list, _nf
 
 
 def calculate_itr1_tax(itr_doc: dict) -> dict:
@@ -56,7 +56,7 @@ def calculate_itr1_tax(itr_doc: dict) -> dict:
         ded = itr_doc.get("deductions", {})
         total_deductions = _nf(ded, "total_chapter_via_deductions")
         if total_deductions == 0.0:
-            from app.services.field_calculator import _calc_total_via_deductions
+            from app.mcps.services.field_calculator import _calc_total_via_deductions
             savings_sum = _sum_list(os.get("savings_interest", []))
             total_deductions = _calc_total_via_deductions(ded, savings_sum, 0.0)
 

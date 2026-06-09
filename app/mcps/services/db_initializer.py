@@ -1,5 +1,5 @@
 import logging
-from app.services.db import db
+from app.mcps.services.db import db
 
 logger = logging.getLogger("db_initializer")
 
