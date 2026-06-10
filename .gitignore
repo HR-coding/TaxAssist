@@ -26,12 +26,6 @@ structure.txt
 dist/
 build/
 
-# Local demo/test harnesses & runtime artifacts (contain env-specific Drive/Sheet IDs + email)
+# Runtime artifacts
 .ocr_findings.json
 demo_run.log
-run_full_demo.py
-finalize_regime.py
-drive_ocr_test.py
-create_findings_sheet.py
-populate_and_dump.py
-test_workspace_live.py

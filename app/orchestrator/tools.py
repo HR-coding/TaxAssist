@@ -7,7 +7,10 @@ Anthropic tool_use, LangChain, etc.) without modification.
 
 The Gemini ADK agent in agent.py consumes these directly.
 """
+import logging
 from app.mcps.state_mcp import check_state_mcp, write_state_mcp
+
+logger = logging.getLogger("tools")
 from app.mcps.document_mcp import (
     process_document_mcp, apply_extraction_mcp, register_document_mcp, get_document_mcp
 )
@@ -45,17 +48,32 @@ def check_state_tool(user_id: str) -> dict:
 
 def write_state_tool(user_id: str, updates: dict) -> dict:
     """
-    Write a state transition back to the State Management system immediately
-    after a step completes.
+    Record NON-PRIVILEGED state annotations (e.g. notes, timestamps).
+
+    SECURITY: the agent may NOT advance the workflow or flip verification flags.
+    Writes to protected paths (portal_prerequisites.*.status, milestones,
+    schedule_checklist.*.status, current_portal_stage, auth_status, filing_status)
+    are refused — those are committed only by the deterministic engine/gateway
+    after their own validation. This closes the in-process bypass gap.
 
     Args:
         user_id: Unique identifier for the taxpayer.
-        updates: Flat dict of field paths to values, e.g.
-                 {"portal_prerequisites.pan_verification": "VERIFIED"}.
+        updates: Flat dict of NON-protected field paths to values.
 
     Returns:
-        Confirmation dict with fields_updated list.
+        Confirmation dict, or a 'blocked' dict listing the refused fields.
     """
+    from app.core.write_policy import protected_state_fields
+    blocked = protected_state_fields(updates)
+    if blocked:
+        logger.warning(f"[{user_id}] Blocked agent state escalation: {blocked}")
+        return {
+            "status": "blocked",
+            "reason": "protected_state_write",
+            "blocked_fields": blocked,
+            "detail": ("These fields are owned by the deterministic workflow layer "
+                       "and cannot be set by the agent. Continue via the normal flow."),
+        }
     return write_state_mcp(user_id, updates)
 
 
@@ -96,17 +114,35 @@ def register_document_tool(file_name: str, source_id: str, file_hash: str = "") 
 def apply_extraction_tool(user_id: str, extraction_result: dict) -> dict:
     """
     Apply a TaxDocumentExtraction result to the user's ITR ledger.
-    Call this after OCR extraction to persist all field mappings.
-    Triggers live calculated-field recomputation automatically.
+
+    SECURITY: the agent cannot inject fabricated tax figures. The extraction must
+    match a document that was actually ingested by the system (its content hash
+    must already exist in document_registry). Otherwise the write is refused —
+    so a poisoned document/prompt cannot make the agent forge salary/TDS values.
 
     Args:
         user_id: The taxpayer's user_id.
-        extraction_result: Dict from the OCR extractor with document_type,
-                           financial_year, and extractions list.
+        extraction_result: Dict from the OCR extractor (document_type,
+                           financial_year, extractions list).
 
     Returns:
-        Summary of fields applied and any errors.
+        Summary of fields applied, or a 'blocked' dict if provenance fails.
     """
+    from app.core.ocr_extractor import hash_extraction
+    from app.core.db import db
+    content_hash = hash_extraction(extraction_result)
+    registered = db.document_registry.find_one(
+        {"user_id": user_id, "file_hash": content_hash}
+    )
+    if not registered:
+        logger.warning(f"[{user_id}] Blocked unregistered extraction (no provenance).")
+        return {
+            "status": "blocked",
+            "reason": "unregistered_extraction",
+            "detail": ("Refusing to write tax data: this extraction does not match any "
+                       "system-ingested document. Only OCR output from a registered "
+                       "Drive document can be applied."),
+        }
     return apply_extraction_mcp(user_id, extraction_result)
 
 
@@ -367,12 +403,15 @@ def export_findings_to_sheet_tool(extraction_result: dict, tax_summary: dict = N
 # FLAT REGISTRY — all tools in one list
 # Consume this in any provider's tool registration call.
 # ─────────────────────────────────────────────
+# NOTE: register_document_tool is intentionally NOT exposed to the agent —
+# document registration is a system-only operation (trusted Drive sync). If the
+# agent could register documents it could forge the provenance that
+# apply_extraction_tool checks. It remains importable for internal/test use.
 ALL_TOOLS = [
     check_state_tool,
     apply_extraction_tool,
     write_state_tool,
     process_document_tool,
-    register_document_tool,
     get_document_tool,
     retrieve_tax_rules_tool,
     calculate_itr1_tax_tool,
