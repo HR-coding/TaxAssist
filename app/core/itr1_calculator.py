@@ -106,6 +106,43 @@ def calculate_itr1_tax(itr_doc: dict) -> dict:
     }
 
 
+def calculate_itr1_with_comparison(itr_doc: dict, chosen: str = "NEW") -> dict:
+    """
+    Compute ITR-1 tax under BOTH regimes and return the chosen one enriched with a
+    comparison, so the agent can honour the user's choice while flagging the cheaper
+    option.
+
+    Args:
+        itr_doc: Full ITR-1 ledger dict.
+        chosen:  "NEW" or "OLD" — the regime the user asked for.
+
+    Returns:
+        The chosen regime's result, plus regime_chosen, cheaper_regime,
+        new_regime_payable, old_regime_payable.
+    """
+    base = dict(itr_doc)
+    si = dict(base.get("salary_income", {}))
+    # If gross salary is known, drop any stored net so each regime applies its own
+    # (regime-aware) standard deduction; otherwise keep the stored net.
+    if _nf(si, "gross_salary") > 0:
+        si.pop("net_salary_income", None)
+    base["salary_income"] = si
+
+    new = calculate_itr1_tax({**base, "tax_regime": "NEW"})
+    old = calculate_itr1_tax({**base, "tax_regime": "OLD"})
+    chosen = (chosen or "NEW").upper()
+    selected = old if chosen == "OLD" else new
+    cheaper = "NEW" if new["net_tax_payable"] <= old["net_tax_payable"] else "OLD"
+
+    return {
+        **selected,
+        "regime_chosen": chosen,
+        "cheaper_regime": cheaper,
+        "new_regime_payable": new["net_tax_payable"],
+        "old_regime_payable": old["net_tax_payable"],
+    }
+
+
 def _compute_old_regime_tax(income: float) -> float:
     tax = 0.0
     if income > 1000000:

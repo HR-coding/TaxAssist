@@ -7,14 +7,14 @@ from app.core.workspace_orchestrator import (
 from app.core.pii_vault import anonymize_document
 from app.core.itr_service import get_itr, create_itr, update_itr
 from app.core.itr_mapper import map_document_to_itr
-from app.core.itr1_calculator import calculate_itr1_tax
+from app.core.itr1_calculator import calculate_itr1_tax, calculate_itr1_with_comparison
 from app.core.itr2_calculator import calculate_itr2_tax
 
 logger = logging.getLogger("orchestrator")
 
 
 def execute_workflow(user_id: str, document_data: dict = None, to_email: str = None,
-                     itr_type: str = "ITR1") -> dict:
+                     itr_type: str = "ITR1", regime: str = "NEW") -> dict:
     """
     Main orchestrator.
 
@@ -105,7 +105,8 @@ def execute_workflow(user_id: str, document_data: dict = None, to_email: str = N
         if effective_itr_type in ("ITR2", "ITR-2"):
             tax_result = calculate_itr2_tax(updated_itr)
         else:
-            tax_result = calculate_itr1_tax(updated_itr)
+            # Compute both regimes; honour the requested one, flag the cheaper.
+            tax_result = calculate_itr1_with_comparison(updated_itr, chosen=regime)
         update_itr(user_id, {"tax_summary": tax_result})
         write_state_mcp(user_id, {
             "portal_validation_milestones.gross_total_income_computed": True,

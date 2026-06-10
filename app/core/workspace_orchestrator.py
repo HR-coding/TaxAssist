@@ -77,6 +77,47 @@ def _download_file_bytes(service, file_id: str) -> bytes:
     return buf.getvalue()
 
 
+# Word/ODT/RTF docs the OCR pipeline can't read directly but Drive can convert.
+_CONVERTIBLE_MIME = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "application/msword",                                                       # .doc
+    "application/vnd.oasis.opendocument.text",                                  # .odt
+    "application/rtf", "text/rtf",
+}
+_CONVERTIBLE_EXT = (".docx", ".doc", ".odt", ".rtf")
+
+
+def _pdf_bytes_for_ocr(service, drive_file: dict):
+    """
+    Return PDF bytes ready for the OCR pipeline, converting via Drive when needed:
+      - PDF                 -> downloaded as-is
+      - native Google Doc   -> exported to PDF
+      - .docx/.doc/.odt/.rtf-> copied to a temp Google Doc, exported to PDF, cleaned up
+      - anything else       -> None (OCR is skipped)
+    """
+    file_id = drive_file["id"]
+    mime = drive_file.get("mimeType", "")
+    name = drive_file.get("name", "").lower()
+
+    if mime == "application/pdf" or name.endswith(".pdf"):
+        return _download_file_bytes(service, file_id)
+
+    if mime == "application/vnd.google-apps.document":
+        return service.files().export(fileId=file_id, mimeType="application/pdf").execute()
+
+    if mime in _CONVERTIBLE_MIME or name.endswith(_CONVERTIBLE_EXT):
+        tmp = service.files().copy(fileId=file_id, body={
+            "name": "._ocr_tmp", "mimeType": "application/vnd.google-apps.document"}).execute()
+        try:
+            return service.files().export(fileId=tmp["id"], mimeType="application/pdf").execute()
+        finally:
+            try:
+                service.files().delete(fileId=tmp["id"]).execute()
+            except Exception:
+                pass
+    return None
+
+
 def _handle_new_file(service, user_id: str, drive_file: dict):
     """
     Addition flow: download → OCR extract → register → update state checklist.
@@ -87,23 +128,27 @@ def _handle_new_file(service, user_id: str, drive_file: dict):
 
     extraction_result = {}
     data_hash = ""
+    doc_type = "UNKNOWN"
 
-    # Only run OCR on PDFs for now
-    if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+    # Run OCR on PDFs and Drive-convertible docs (docx/doc/odt/rtf/Google Docs)
+    pdf_bytes = None
+    try:
+        pdf_bytes = _pdf_bytes_for_ocr(service, drive_file)
+    except Exception as e:
+        logger.warning(f"PDF conversion failed for {filename}: {e}")
+
+    if pdf_bytes:
         try:
             from app.core.ocr_extractor import extract_financial_data
-            file_bytes = _download_file_bytes(service, file_id)
-            result = extract_financial_data(file_bytes, file_id)
+            result = extract_financial_data(pdf_bytes, file_id, mime_type="application/pdf")
             extraction_result = result["extraction"]
             data_hash = result["data_hash"]
             doc_type = extraction_result.get("document_type", "UNKNOWN")
         except Exception as e:
             logger.warning(f"OCR failed for {filename}: {e}")
-            doc_type = "UNKNOWN"
     else:
         from app.core.hash_generator import generate_hash
         data_hash = generate_hash(filename)
-        doc_type = "UNKNOWN"
 
     # Register in document_registry
     import uuid
@@ -194,11 +239,16 @@ def _handle_modified_file(service, user_id: str, drive_file: dict, existing_doc:
     new_extraction = {}
     new_hash = stored_hash
 
-    if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+    pdf_bytes = None
+    try:
+        pdf_bytes = _pdf_bytes_for_ocr(service, drive_file)
+    except Exception as e:
+        logger.warning(f"PDF conversion failed for {filename}: {e}")
+
+    if pdf_bytes:
         try:
             from app.core.ocr_extractor import extract_financial_data
-            file_bytes = _download_file_bytes(service, file_id)
-            result = extract_financial_data(file_bytes, file_id)
+            result = extract_financial_data(pdf_bytes, file_id, mime_type="application/pdf")
             new_extraction = result["extraction"]
             new_hash = result["data_hash"]
         except Exception as e:

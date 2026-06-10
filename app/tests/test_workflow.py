@@ -1067,7 +1067,7 @@ class TestTaxRulesMCP(unittest.TestCase):
 class TestADKTools(unittest.TestCase):
     def test_all_tools_count(self):
         from app.orchestrator.tools import ALL_TOOLS
-        self.assertEqual(len(ALL_TOOLS), 14)
+        self.assertEqual(len(ALL_TOOLS), 16)
 
     def test_calculate_itr1_tax_tool_nested(self):
         from app.orchestrator.tools import calculate_itr1_tax_tool
@@ -1096,6 +1096,118 @@ class TestADKTools(unittest.TestCase):
             result = check_state_tool("u1")
             mock_mcp.assert_called_once_with("u1")
             self.assertEqual(result["user_id"], "u1")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 13.  EMAIL HUMAN-IN-THE-LOOP
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestEmailHITL(unittest.TestCase):
+    def test_clean_reply_strips_gmail_quote(self):
+        from app.core.email_hitl import clean_reply
+        raw = ("CONFIRM\n\nOn Wed, Jun 10, 2026 at 12:09 PM harish <h@gmail.com>\n"
+               "wrote:\n> original question text")
+        self.assertEqual(clean_reply(raw), "CONFIRM")
+
+    def test_clean_reply_first_line_only(self):
+        from app.core.email_hitl import clean_reply
+        self.assertEqual(clean_reply("4\n\nOn Tue ... <a@b.com>\nwrote:"), "4")
+
+    def test_first_number_handles_commas(self):
+        from app.core.email_hitl import first_number
+        self.assertEqual(first_number("eg 15,000 gold"), 15000.0)
+        self.assertIsNone(first_number("none"))
+
+    def test_affirmative(self):
+        from app.core.email_hitl import affirmative
+        self.assertTrue(affirmative("please COMPUTE now"))
+        self.assertTrue(affirmative("yes approve"))
+        self.assertFalse(affirmative("please deny this"))
+        self.assertFalse(affirmative(""))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 14.  REGIME COMPARISON
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestRegimeComparison(unittest.TestCase):
+    def _doc(self):
+        return {
+            "itr_type": "ITR1", "tax_regime": "NEW",
+            "salary_income": {"gross_salary": {"value": 1860000},
+                              "professional_tax": {"value": 2400}},
+            "house_property": {"net_house_property_income": {"value": 0}},
+            "other_sources": {},
+            "deductions": {"total_chapter_via_deductions": {"value": 150000}},
+            "taxes_paid": {"tds_on_salary": [{"value": 214500}]},
+        }
+
+    def test_honours_chosen_regime(self):
+        from app.core.itr1_calculator import calculate_itr1_with_comparison
+        res = calculate_itr1_with_comparison(self._doc(), chosen="OLD")
+        self.assertEqual(res["regime_chosen"], "OLD")
+        self.assertEqual(res["tax_regime"], "OLD")
+
+    def test_flags_cheaper_regime(self):
+        from app.core.itr1_calculator import calculate_itr1_with_comparison
+        res = calculate_itr1_with_comparison(self._doc(), chosen="OLD")
+        self.assertIn("new_regime_payable", res)
+        self.assertIn("old_regime_payable", res)
+        # high earner → NEW regime is cheaper
+        self.assertEqual(res["cheaper_regime"], "NEW")
+        self.assertLess(res["new_regime_payable"], res["old_regime_payable"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 15.  DOCX -> PDF CONVERSION IN OCR PATH
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestDocxConversion(unittest.TestCase):
+    def test_pdf_passthrough(self):
+        from app.core import workspace_orchestrator as wo
+        svc = MagicMock()
+        with patch.object(wo, "_download_file_bytes", return_value=b"PDFDATA") as dl:
+            out = wo._pdf_bytes_for_ocr(
+                svc, {"id": "f1", "name": "a.pdf", "mimeType": "application/pdf"})
+            self.assertEqual(out, b"PDFDATA")
+            dl.assert_called_once()
+
+    def test_docx_converted_via_drive(self):
+        from app.core import workspace_orchestrator as wo
+        svc = MagicMock()
+        svc.files().copy().execute.return_value = {"id": "tmpdoc"}
+        svc.files().export().execute.return_value = b"PDFBYTES"
+        out = wo._pdf_bytes_for_ocr(svc, {
+            "id": "f2", "name": "form16.docx",
+            "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"})
+        self.assertEqual(out, b"PDFBYTES")
+
+    def test_unconvertible_returns_none(self):
+        from app.core import workspace_orchestrator as wo
+        svc = MagicMock()
+        out = wo._pdf_bytes_for_ocr(
+            svc, {"id": "f3", "name": "pic.png", "mimeType": "image/png"})
+        self.assertIsNone(out)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 16.  NEW AGENT TOOLS (email HITL + sheet export)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestNewTools(unittest.TestCase):
+    def test_ask_user_via_email_tool(self):
+        with patch("app.core.email_hitl.ask_and_wait", return_value="APPROVE"):
+            from app.orchestrator.tools import ask_user_via_email_tool
+            res = ask_user_via_email_tool("approve?", subject="Q")
+            self.assertEqual(res["reply"], "APPROVE")
+            self.assertTrue(res["answered"])
+
+    def test_export_findings_to_sheet_tool(self):
+        with patch("app.core.sheet_exporter.export_findings_to_sheet",
+                   return_value={"spreadsheet_id": "s1", "url": "http://x"}):
+            from app.orchestrator.tools import export_findings_to_sheet_tool
+            res = export_findings_to_sheet_tool({"extractions": []})
+            self.assertEqual(res["spreadsheet_id"], "s1")
 
 
 if __name__ == "__main__":

@@ -327,6 +327,42 @@ def create_tax_reminder_tool() -> dict:
     return create_tax_reminder()
 
 
+def ask_user_via_email_tool(question: str, subject: str = "Action required",
+                            timeout_seconds: int = 300) -> dict:
+    """
+    Ask the taxpayer a question by email and WAIT for their reply (human-in-the-loop).
+    Use this to obtain approvals, confirmations, or missing values instead of guessing.
+    The reply text is read back automatically (Gmail quoted history is stripped).
+
+    Args:
+        question: The question / email body to send to the user.
+        subject: Email subject line.
+        timeout_seconds: How long to wait for a reply before returning unanswered.
+
+    Returns:
+        Dict with keys: reply (the user's text), answered (bool).
+    """
+    from app.core.email_hitl import ask_and_wait
+    reply = ask_and_wait(question, subject=subject, timeout=timeout_seconds)
+    return {"question": question, "reply": reply, "answered": bool(reply)}
+
+
+def export_findings_to_sheet_tool(extraction_result: dict, tax_summary: dict = None) -> dict:
+    """
+    Export OCR findings (and optionally a tax computation) to a Google Sheet so the
+    user can review them. Creates a new sheet in the configured Drive folder.
+
+    Args:
+        extraction_result: TaxDocumentExtraction dict (document_type, financial_year, extractions).
+        tax_summary: Optional tax-calculator result; adds a 'Tax Computation' tab.
+
+    Returns:
+        Dict with spreadsheet_id and url.
+    """
+    from app.core.sheet_exporter import export_findings_to_sheet
+    return export_findings_to_sheet(extraction_result, tax_summary=tax_summary)
+
+
 # ─────────────────────────────────────────────
 # FLAT REGISTRY — all tools in one list
 # Consume this in any provider's tool registration call.
@@ -346,4 +382,6 @@ ALL_TOOLS = [
     update_verified_transaction_tool,
     send_clarification_email_tool,
     create_tax_reminder_tool,
+    ask_user_via_email_tool,
+    export_findings_to_sheet_tool,
 ]
