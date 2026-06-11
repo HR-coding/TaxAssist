@@ -188,9 +188,19 @@ def _log_run(pid: str, status: str, detail: str, checkpoint=None):
 
 
 def _ready_itr_doc(itr_type: str) -> dict:
-    """A realistic, fully-populated ITR record so the deterministic engine computes."""
+    """A realistic, fully-populated ITR record so the deterministic engine computes
+    AND the export produces a schema-valid, uploadable JSON. personal_info carries
+    synthetic-but-valid identity/address (the first/last name is filled from the
+    profile at export time); for the live demo this is sandbox-only test data."""
     return {
         "itr_type": itr_type, "tax_regime": "NEW", "filing_status": "VERIFIED",
+        "personal_info": {
+            "pan": "ABCPT1234Q", "aadhaar_number": "123412341234",
+            "date_of_birth": "1990-05-12", "father_name": "Suresh Kumar",
+            "email": "taxpayer@example.com", "mobile_number": "9876543210",
+            "residence_no": "12", "locality": "MG Road", "city": "Bengaluru",
+            "state_code": "18", "pincode": "560001",
+        },
         "salary_income": {"gross_salary": {"value": 1240000},
                           "net_salary_income": {"value": 1190000}},
         "house_property": {"net_house_property_income": {"value": 0}},
@@ -236,10 +246,22 @@ def _reset_google_ctx(ctx):
         google_auth.reset_current_user(ctx)
 
 
-def _export_artifacts(pid: str, p, tax: dict) -> dict | None:
+def _share_anyone_reader(drive, file_id: str):
+    """Make a Drive file/folder viewable by anyone with the link (demo only)."""
+    try:
+        drive.permissions().create(
+            fileId=file_id, body={"type": "anyone", "role": "reader"}, fields="id").execute()
+    except Exception as e:
+        import logging
+        logging.getLogger("app_api").warning("public-share skipped for %s: %s", file_id, e)
+
+
+def _export_artifacts(pid: str, p, tax: dict, share_public: bool = False) -> dict | None:
     """Write findings + computation to the profile's real Google Sheet, creating
     the sheet (and a dedicated Drive folder) on first run. Persists both IDs on
-    the profile so the UI links straight to the agent's actual artifacts."""
+    the profile so the UI links straight to the agent's actual artifacts. In demo
+    mode the folder + sheet are shared (anyone-with-link can view) so the in-app
+    Drive/Sheets links open for anyone."""
     from app.core import google_auth
     from app.core.sheet_exporter import export_findings_to_sheet
     from app.core.control_models import Profile as ProfileModel
@@ -252,6 +274,8 @@ def _export_artifacts(pid: str, p, tax: dict) -> dict | None:
                   "mimeType": "application/vnd.google-apps.folder"},
             fields="id").execute()
         folder_id = folder["id"]
+        if share_public:
+            _share_anyone_reader(drive, folder_id)
 
     extraction = {
         "document_type": "FORM_16",
@@ -268,6 +292,10 @@ def _export_artifacts(pid: str, p, tax: dict) -> dict | None:
         title=f"TaxAssist - {p.display_name} (AY 2026-27)",
         folder_id=folder_id, spreadsheet_id=(p.sheets_id or None))
 
+    # First time we create the sheet, share it too (demo only).
+    if share_public and not p.sheets_id and info.get("spreadsheet_id"):
+        _share_anyone_reader(google_auth.get_drive_service(), info["spreadsheet_id"])
+
     with get_session() as s:
         prof = s.get(ProfileModel, pid)
         prof.drive_folder_id = folder_id
@@ -280,6 +308,7 @@ def _compute_now(pid: str, p, user: dict, email: str) -> dict:
     """Run the deterministic orchestrator, export results to the user's real
     Google Sheet, and log everything. Shared by the instant and post-approval paths."""
     from app.orchestrator.engine import execute_workflow
+    from app.orchestrator.auth_api import is_demo_email
     ctx = _user_google_ctx(user)
     sheet = None
     try:
@@ -291,8 +320,14 @@ def _compute_now(pid: str, p, user: dict, email: str) -> dict:
             raise HTTPException(status_code=500, detail=f"Run failed: {e}")
 
         tax = result.get("tax_result", {}) or {}
+        # Persist the computed figures so the UI's "Computed return" card and the
+        # ITR-JSON export both read the exact numbers from this run.
+        if tax:
+            db.itr_records.update_one(
+                {"user_id": pid},
+                {"$set": {"tax_summary": tax, "filing_status": "COMPUTED"}}, upsert=True)
         try:
-            sheet = _export_artifacts(pid, p, tax)
+            sheet = _export_artifacts(pid, p, tax, share_public=is_demo_email(user.get("email")))
             _log_run(pid, "done",
                      "Wrote findings and the computed return to your Google Sheet.",
                      checkpoint={"sheet_url": sheet["url"], "folder_id": sheet["folder_id"]})

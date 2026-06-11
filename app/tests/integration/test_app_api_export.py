@@ -49,6 +49,19 @@ class TestItrJsonEndpoint(unittest.TestCase):
                 app_api.profile_itr_json("p1", {"user_id": "u1"})
         self.assertEqual(ctx.exception.status_code, 404)
 
+    def test_demo_ready_doc_exports_valid_json(self):
+        # The demo "Run" writes _ready_itr_doc; the Export must yield a file that
+        # validates clean against the official schema (i.e. is actually uploadable).
+        import json
+        from app.orchestrator import app_api
+        from app.core.itr_json_export import validate_itr_json
+        rec = app_api._ready_itr_doc("ITR1")
+        with patch.object(app_api.identity, "list_profiles", return_value=[_profile("p1")]), \
+             patch.object(app_api, "db") as mock_db:
+            mock_db.itr_records.find_one.return_value = rec
+            resp = app_api.profile_itr_json("p1", {"user_id": "u1"})
+        self.assertEqual(validate_itr_json(json.loads(resp.body)), [])
+
     def test_cross_tenant_blocked(self):
         from app.orchestrator import app_api
         from fastapi import HTTPException
