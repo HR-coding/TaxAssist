@@ -68,6 +68,14 @@ defense); the adapter extracts and parses it.
 loads/refreshes that user's **encrypted** token from Postgres; otherwise falls back to
 `token.json` (single-user dev).
 
+**Live demo (no OAuth).** `POST /auth/demo` (gated by `DEMO_MODE`) mints an app session for
+a fresh, isolated ephemeral user — no Google consent screen. That user holds no per-user
+token, so `_active_credentials()` falls back to the shared `token.json` (a team
+pre-authorized **sandbox** Google account), giving the visitor the full, real Drive / Gmail /
+Sheets / Calendar integration. Each visitor is a separate tenant; the email approval gate is
+auto-approved for demo users (no reply inbox); created Drive folders + Sheets are shared
+(anyone-with-link) so the in-app quick-links open the actual artifacts.
+
 ## Async, resumable runs
 
 The email human-in-the-loop blocks for minutes, so runs are durable background jobs
@@ -87,9 +95,25 @@ otherwise).
 3. **In-process write-policy** (`write_policy.py`) — the agent's tools can't escalate the
    workflow or write fabricated tax data (extractions are provenance-checked against the
    document registry); document registration is not exposed to the agent.
-4. **Determinism** — the decider and tax calculators use no LLM.
+4. **Determinism** — the decider and tax calculators use no LLM. All slab rates live in one
+   source of truth (`app/core/tax_rules.json`, read by both the calculators and the agent's
+   `retrieve_tax_rules_tool`), with the section 87A rebate and new-regime marginal relief.
 5. **Email safety** (`email_format.py`) — every send boundary sanitizes the body so
    internal field keys / code never reach a recipient.
+
+## Portal-ready ITR JSON export
+
+`app/core/itr_json_export.py` maps the internal ledger + the deterministic tax result into
+the **official Income Tax Department JSON envelope** (`{"ITR": {"ITR1" | "ITR2": {…}}}`,
+AY 2026-27 schema Ver1.0). The published **draft-04** schemas are bundled under
+`app/core/schemas/`, and `validate_itr_json()` checks the output against them — the same
+contract the offline utility enforces. **Both ITR-1 and ITR-2 validate clean** for a complete
+ledger (the all-numeric loss-adjustment schedules CYLA/BFLA/CFL are filled by a schema-driven
+zero-filler). The slab/rebate/cess breakdown is recomputed through `app.core.tax_rules` (the
+single rate source), so the file can never diverge from the computed return. Like the
+Sheets/Gmail writes, it runs in the **trusted local layer on reconstructed PII** — never
+agent-side. Served by the tenant-checked `GET /profiles/{pid}/itr-json`, and surfaced in the
+UI once every task is verified.
 
 ## Agent runtime — Google Cloud Agent Builder
 
@@ -107,7 +131,9 @@ Gemini is invoked at runtime in OCR, the notification copywriter, and the agent 
 
 ## Testing
 
-165 tests in `app/tests/{unit,integration,security}/`, fully mocked (no live network).
+195 tests in `app/tests/{unit,integration,security}/`, fully mocked (no live network),
+including official-schema validation of the exported ITR JSON (both forms) and an
+end-to-end live-demo workflow test (login → run → all tasks verified → schema-valid export).
 A **tool-schema gate** (`scripts/check_tool_schema.py`) diffs the agent's tool contract
 against a committed baseline to block backward-incompatible changes in CI.
 
@@ -115,5 +141,8 @@ against a committed baseline to block backward-incompatible changes in CI.
 
 All production phases are implemented and tested: control plane, per-user OAuth, tenancy,
 async runs, the Google credential boundary (MCP extraction seam), Agent Engine deploy
-wiring, Docker/CI, and feedback/privacy. Live activation needs the external infra
-(Postgres, Redis, the GCP Agent Engine deploy, the MCP server container).
+wiring, Docker/CI, feedback/privacy, the **React workspace** (live agent transparency,
+plain-English status, gated ITR-JSON download), the **portal-ready ITR JSON export**
+(official-schema validated), and the **one-click live demo**. Live activation needs the
+external infra (Postgres, Redis, the GCP Agent Engine deploy, the MCP server container) and
+the sandbox `token.json` for the demo.

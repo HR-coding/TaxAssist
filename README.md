@@ -5,9 +5,11 @@ An autonomous, **multi-user Indian Income Tax filing assistant** (ITR-1 & ITR-2)
 
 The agent reads a taxpayer's documents from Google Drive, extracts the figures with
 Gemini vision OCR, asks the user to confirm over email (human-in-the-loop), computes
-tax deterministically from official slab rates, and writes the results back to Google
-Sheets — all under a strict, security-first architecture where the AI is treated as
-untrusted and can never tamper with tax data or leak personal information.
+tax deterministically from official slab rates, writes the results back to Google
+Sheets, and exports a **portal-ready ITR JSON** (validated against the official
+Income Tax Department schema) — all under a strict, security-first architecture where
+the AI is treated as untrusted and can never tamper with tax data or leak personal
+information.
 
 > Architecture details: see **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)**.
 
@@ -55,11 +57,19 @@ in-app “Open results sheet / Drive folder” links work for anyone.
   calculators and the agent's `retrieve_tax_rules_tool` both read — so they can never diverge.
 - **Google Workspace**: Gmail, Calendar (deadline reminders), Sheets (findings + result),
   Drive — per user.
+- **Portal-ready ITR JSON**: exports the computed return as the official Income Tax
+  Department offline-utility JSON (ITR-1 & ITR-2), **validated against the published
+  schema** (`app/core/itr_json_export.py`). Downloadable from the workspace once every task
+  is verified.
+- **One-click live demo**: judges run the real agent on a sandbox Google Workspace with no
+  Google sign-in (see *Try it live* above).
 - **Multi-tenant**: one account → many profiles (e.g. self + spouse), each isolated.
 
-> **Scope:** TaxAssist prepares a **file-ready** return — it extracts, verifies, computes and
-> writes the results to your Google Sheet. It does **not** submit to the income-tax portal;
-> the final e-filing step stays with you. Surcharge on incomes above ₹50L is not yet modelled.
+> **Scope:** TaxAssist prepares a **file-ready** return — it extracts, verifies, computes,
+> writes the results to your Google Sheet, and exports the **official offline-utility JSON**
+> ready to upload. It does **not** auto-submit to the income-tax portal; the final upload +
+> e-verification stay with you. Surcharge above ₹50L and the granular ITR-2 *input* schedules
+> (per-transaction capital gains, foreign assets) are not yet itemised — the Part B totals are.
 
 ## Tech stack
 
@@ -71,6 +81,7 @@ in-app “Open results sheet / Drive folder” links work for anyone.
 | Queue | **Redis + RQ** (async runs) |
 | API | **FastAPI** |
 | OCR | Gemini vision + pdfplumber |
+| Export | Official IT-Dept ITR JSON schema, validated via **`jsonschema`** |
 
 No competing AI or cloud services are used.
 
@@ -113,8 +124,10 @@ rq worker -u $REDIS_URL tax-agent             # async run worker (if REDIS_URL s
 ```bash
 pytest app/tests -q
 ```
-**165 tests** — `unit/`, `integration/`, `security/` — all MongoDB & Google calls mocked
-(hermetic). Tool-contract gate: `python scripts/check_tool_schema.py`.
+**195 tests** — `unit/`, `integration/`, `security/` — all MongoDB & Google calls mocked
+(hermetic). Includes official-schema validation of the exported ITR JSON (both forms) and a
+full end-to-end live-demo workflow test (login → run → export). Tool-contract gate:
+`python scripts/check_tool_schema.py`.
 
 ## Deploy
 
