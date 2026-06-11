@@ -154,11 +154,12 @@ class TestOrchestratorITR1(unittest.TestCase):
         self.assertTrue(len(result["unmet_dependencies"]) > 0)
 
     def test_prereqs_done_no_doc_calculates_if_checklist_clear(self):
-        # All checklist VERIFIED, milestones done → tax should calculate
+        # All checklist VERIFIED, milestones done → tax should calculate.
+        # Income is above the 12L new-regime 87A rebate limit, so tax is payable.
         itr_doc = {
             "itr_type": "ITR1", "tax_regime": "NEW",
-            "salary_income": {"gross_salary": {"value": 1000000},
-                              "net_salary_income": {"value": 925000}},
+            "salary_income": {"gross_salary": {"value": 1500000},
+                              "net_salary_income": {"value": 1425000}},
             "house_property": {"net_house_property_income": {"value": 0}},
             "other_sources": {"net_other_sources_income": {"value": 0}},
             "deductions": {"total_chapter_via_deductions": {"value": 0}},

@@ -186,7 +186,7 @@ class TestTaxRulesMCP(unittest.TestCase):
         from app.mcps.tax_rules_mcp import retrieve_tax_rules_mcp
         rules = retrieve_tax_rules_mcp("new", "ITR1")
         self.assertEqual(rules["standard_deduction"], 75000)
-        self.assertEqual(len(rules["tax_slabs"]), 6)
+        self.assertEqual(len(rules["tax_slabs"]), 7)
         self.assertIn("80C", rules["section_limits"])
 
     def test_old_regime_returns_correct_slabs(self):
@@ -200,7 +200,7 @@ class TestTaxRulesMCP(unittest.TestCase):
         rules = retrieve_tax_rules_mcp("new", "ITR2")
         self.assertIn("stcg_rate", rules["itr_specific"])
         self.assertIn("ltcg_rate", rules["itr_specific"])
-        self.assertEqual(rules["itr_specific"]["stcg_rate"], 0.15)
+        self.assertEqual(rules["itr_specific"]["stcg_rate"], 0.20)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -11,6 +11,19 @@ untrusted and can never tamper with tax data or leak personal information.
 
 > Architecture details: see **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)**.
 
+## Links
+
+- **Live app:** https://taxassist-267786664719.asia-south1.run.app/
+- **Demo video (≤3 min):** <!-- TODO: paste the public YouTube/Vimeo URL here -->
+- **Partner track:** **MongoDB** — via the official MongoDB MCP server (see [MongoDB MCP integration](SYSTEM_ARCHITECTURE.md#mongodb-mcp-integration)).
+- **License:** [Apache-2.0](LICENSE) — also set in the GitHub repo's *About* sidebar.
+
+## Team
+
+<!-- TODO: list every team member (name — role / handle). All members must also be added on the submission form. -->
+- _Your Name_ — role
+- _Teammate_ — role
+
 ---
 
 ## What it does
@@ -19,11 +32,17 @@ untrusted and can never tamper with tax data or leak personal information.
   with Gemini 2.5-flash vision (handles dense tables and scans).
 - **Human-in-the-loop over email**: emails the user to confirm extracted values /
   approve computation; reads the replies and resumes — as durable, resumable runs.
-- **Deterministic tax engine**: ITR-1 & ITR-2 computed from gov slab rates (no LLM in
-  the math), old vs new regime comparison.
+- **Deterministic tax engine**: ITR-1 & ITR-2 computed from official slab rates (no LLM in
+  the math), old vs new regime comparison, with section 87A rebate and new-regime marginal
+  relief. All rates live in a **single source of truth** (`app/core/tax_rules.json`) that the
+  calculators and the agent's `retrieve_tax_rules_tool` both read — so they can never diverge.
 - **Google Workspace**: Gmail, Calendar (deadline reminders), Sheets (findings + result),
   Drive — per user.
 - **Multi-tenant**: one account → many profiles (e.g. self + spouse), each isolated.
+
+> **Scope:** TaxAssist prepares a **file-ready** return — it extracts, verifies, computes and
+> writes the results to your Google Sheet. It does **not** submit to the income-tax portal;
+> the final e-filing step stays with you. Surcharge on incomes above ₹50L is not yet modelled.
 
 ## Tech stack
 

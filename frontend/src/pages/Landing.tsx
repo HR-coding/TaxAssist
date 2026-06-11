@@ -55,12 +55,13 @@ export default function Landing() {
               <ShieldCheck className="h-3.5 w-3.5" /> ITR-1 &amp; ITR-2 · security-first
             </span>
             <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-5xl">
-              Your income tax, filed by an agent you can{" "}
+              Your income tax return, prepared by an agent you can{" "}
               <span className="text-accent-600">watch.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-500">
               TaxAssist reads your documents, confirms every figure with you over email, and computes
-              your tax deterministically from official slabs — while the AI never sees your name or PAN.
+              your tax deterministically from official slabs — then hands you a file-ready return, while
+              the AI never sees your name or PAN.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -189,7 +190,7 @@ export default function Landing() {
         <div className="overflow-hidden rounded-2xl border border-line bg-paper p-10 text-center shadow-card sm:p-14">
           <FileCheck2 className="mx-auto h-9 w-9 text-accent-600" />
           <h2 className="mx-auto mt-5 max-w-2xl font-display text-3xl font-extrabold tracking-tight text-ink-900">
-            File this year without touching a spreadsheet.
+            Get a file-ready return without touching a spreadsheet.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-ink-500">
             Create your first profile in under a minute and watch the agent work — every figure, every step, fully visible.
@@ -226,7 +227,7 @@ function AgentPeek() {
         <div className="flex items-center gap-2 text-sm">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-50 text-xs font-bold text-accent-700">A</span>
           <span className="font-medium text-ink-900">Anita Sharma</span>
-          <span className="text-ink-400">· ITR-2 · AY 2026–27</span>
+          <span className="text-ink-400">· ITR-2</span>
         </div>
         <span className="chip border-amber-200 bg-amber-50 text-amber-700">Awaiting your reply</span>
       </div>

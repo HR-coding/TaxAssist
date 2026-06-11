@@ -174,25 +174,28 @@ class TestFieldCalculatorITR2(unittest.TestCase):
 
 
 class TestITR1Calculator(unittest.TestCase):
-    def test_new_regime_10l_no_deductions(self):
+    def test_new_regime_925k_taxable_fully_rebated(self):
         from app.core.itr1_calculator import calculate_itr1_tax
         res = calculate_itr1_tax(_itr1_doc(1000000))
-        # net_salary = 1000000 - 75000 = 925000
+        # net_salary = 1000000 - 75000 = 925000, which is under the 12L 87A
+        # rebate limit → tax fully rebated → nothing payable.
         self.assertEqual(res["gross_total_income"], 925000.0)
         self.assertEqual(res["tax_regime"], "NEW")
-        self.assertGreater(res["tax_liability"], 0)
+        self.assertEqual(res["net_tax_payable"], 0.0)
 
-    def test_new_regime_7l_full_87a_rebate(self):
+    def test_new_regime_under_12l_full_87a_rebate(self):
         from app.core.itr1_calculator import calculate_itr1_tax
-        # 700K - 75K std = 625K taxable → tax = (625K-600K)*10% + (600K-300K)*5%
-        # = 2500 + 15000 = 17500 < 25000 rebate → full rebate → 0
+        # 700K - 75K std = 625K taxable → slab tax = (625K-400K)*5% = 11250
+        # < 60000 rebate and < 12L limit → full rebate → 0
         res = calculate_itr1_tax(_itr1_doc(700000))
         self.assertEqual(res["net_tax_payable"], 0.0)
 
-    def test_new_regime_partial_87a_rebate(self):
+    def test_new_regime_above_12l_pays_tax(self):
         from app.core.itr1_calculator import calculate_itr1_tax
-        # 800K gross - 75K = 725K taxable > 700K rebate limit → no rebate applies
-        res = calculate_itr1_tax(_itr1_doc(800000))
+        # 1500K gross - 75K = 1425K taxable, above the 12L rebate limit.
+        # slab tax = 20000 + 40000 + (1425K-1200K)*15% = 93750; income over the
+        # limit (225K) exceeds the tax so no marginal relief → tax stands.
+        res = calculate_itr1_tax(_itr1_doc(1500000))
         self.assertGreater(res["net_tax_payable"], 0.0)
 
     def test_old_regime_with_full_deductions(self):
@@ -221,7 +224,7 @@ class TestITR1Calculator(unittest.TestCase):
     def test_refund_when_tds_exceeds_tax(self):
         from app.core.itr1_calculator import calculate_itr1_tax
         res = calculate_itr1_tax(_itr1_doc(500000, tax_regime="NEW", tds=50000))
-        # 500K - 75K = 425K, tax = (425K-300K)*5%=6250 +4%cess=6500, tds=50000 → refund
+        # 500K - 75K = 425K taxable → fully rebated under 12L → 0 tax; tds 50000 → refund
         self.assertGreater(res["refund_due"], 0.0)
         self.assertEqual(res["net_tax_payable"], 0.0)
 
@@ -274,18 +277,17 @@ class TestITR2Calculator(unittest.TestCase):
         self.assertEqual(res["gross_total_income"], 2000000.0)
         self.assertGreater(res["tax_liability"], 0)
 
-    def test_stcg_taxed_at_15_percent(self):
+    def test_stcg_special_rate(self):
         from app.core.itr2_calculator import calculate_itr2_tax
-        # High income so regular income tax + STCG@15%
+        # STCG (Sec 111A) taxed at the special flat rate; check it is included.
         res = calculate_itr2_tax(self._full_itr2(stcg=100000, taxes_paid=0))
-        # Check STCG is included in gross
         self.assertEqual(res["stcg"], 100000.0)
 
-    def test_ltcg_1l_exemption(self):
+    def test_ltcg_exemption(self):
         from app.core.itr2_calculator import calculate_itr2_tax
-        # LTCG = 250000, exempt 100000, taxable LTCG = 150000
+        # LTCG = 250000, exempt 125000 (Sec 112A) → taxable LTCG = 125000
         res = calculate_itr2_tax(self._full_itr2(ltcg=250000, taxes_paid=0))
-        self.assertEqual(res["ltcg"], 150000.0)  # after 1L exemption
+        self.assertEqual(res["ltcg"], 125000.0)  # after 1.25L exemption
 
     def test_vda_taxed_at_30_percent(self):
         from app.core.itr2_calculator import calculate_itr2_tax

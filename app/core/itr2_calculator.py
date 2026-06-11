@@ -1,10 +1,13 @@
 """
-Deterministic ITR-2 tax calculator for FY 2025-26 (AY 2026-27).
-Source: https://www.incometaxindia.gov.in/
+Deterministic ITR-2 tax calculator.
+Slab rates, rebate, cess and the capital-gains / VDA special rates are loaded
+from the single source of truth (tax_rules.json via app.core.tax_rules),
+grounded in https://www.incometaxindia.gov.in/.
 
 Reads from the new schema structure (schemas.jsonc).
 """
 from app.core.field_calculator import _sum_list, _sum_nf_list, _nf
+from app.core import tax_rules
 
 
 def calculate_itr2_tax(itr_doc: dict) -> dict:
@@ -49,8 +52,8 @@ def calculate_itr2_tax(itr_doc: dict) -> dict:
                 for i in cg.get("long_term_gains", [])
                 if isinstance(i, dict)
             )
-        # LTCG exemption: 1L under Sec 112A for listed shares
-        ltg_taxable = max(ltg - 100000.0, 0.0)
+        # LTCG exemption under Sec 112A for listed shares (rate from single source)
+        ltg_taxable = max(ltg - tax_rules.capital_gains_rates()["ltcg_exemption"], 0.0)
     else:
         stg = ltg_taxable = 0.0
 
@@ -91,30 +94,21 @@ def calculate_itr2_tax(itr_doc: dict) -> dict:
     regular_income = gross_salary + hp_income + other_income
     taxable_income = max(regular_income - total_deductions, 0.0)
 
-    # ── Tax slabs on regular income only ─────────────────────────────────
+    # ── Tax on regular slab income (rates from the single source of truth) ─
     tax_regime = itr_doc.get("tax_regime", "NEW").upper()
-    if tax_regime == "OLD":
-        tax = _compute_old_regime_tax(taxable_income)
-        rebate_limit = 500000.0
-        rebate_max = 12500.0
-    else:
-        tax = _compute_new_regime_tax(taxable_income)
-        rebate_limit = 700000.0
-        rebate_max = 25000.0
+    regular_tax = tax_rules.slab_tax(taxable_income, tax_regime)
+    # Section 87A rebate / marginal relief applies only to regular slab tax,
+    # never to the special-rate capital-gains / VDA income.
+    regular_tax = tax_rules.apply_rebate_and_relief(taxable_income, regular_tax, tax_regime)
 
-    # STCG at 15% (Sec 111A), LTCG at 10% (Sec 112A), VDA at 30% — special flat rates
-    stg_tax = stg * 0.15
-    ltg_tax = ltg_taxable * 0.10
-    vda_tax = vda_income * 0.30
-    tax = tax + stg_tax + ltg_tax + vda_tax
+    # Special flat rates: STCG (Sec 111A), LTCG (Sec 112A), VDA (Sec 115BBH)
+    rates = tax_rules.capital_gains_rates()
+    stg_tax = stg * rates["stcg_rate"]
+    ltg_tax = ltg_taxable * rates["ltcg_rate"]
+    vda_tax = vda_income * rates["vda_rate"]
+    tax = regular_tax + stg_tax + ltg_tax + vda_tax
 
-    # Section 87A rebate applies only to regular slab tax (not CG/VDA)
-    if taxable_income <= rebate_limit:
-        regular_tax = tax - stg_tax - ltg_tax - vda_tax
-        rebate = min(regular_tax, rebate_max)
-        tax = max(tax - rebate, 0.0)
-
-    tax = round(tax * 1.04, 2)  # 4% cess
+    tax = round(tax * (1.0 + tax_rules.cess_rate(tax_regime)), 2)  # health & education cess
 
     # ── Taxes paid ────────────────────────────────────────────────────────
     tp = itr_doc.get("taxes_paid", {})
@@ -145,35 +139,3 @@ def calculate_itr2_tax(itr_doc: dict) -> dict:
         "refund_due": round(refund_due, 2),
         "tax_regime": tax_regime
     }
-
-
-def _compute_old_regime_tax(income: float) -> float:
-    tax = 0.0
-    if income > 1000000:
-        tax += (income - 1000000) * 0.30
-        income = 1000000.0
-    if income > 500000:
-        tax += (income - 500000) * 0.20
-        income = 500000.0
-    if income > 250000:
-        tax += (income - 250000) * 0.05
-    return tax
-
-
-def _compute_new_regime_tax(income: float) -> float:
-    tax = 0.0
-    if income > 1500000:
-        tax += (income - 1500000) * 0.30
-        income = 1500000.0
-    if income > 1200000:
-        tax += (income - 1200000) * 0.20
-        income = 1200000.0
-    if income > 900000:
-        tax += (income - 900000) * 0.15
-        income = 900000.0
-    if income > 600000:
-        tax += (income - 600000) * 0.10
-        income = 600000.0
-    if income > 300000:
-        tax += (income - 300000) * 0.05
-    return tax

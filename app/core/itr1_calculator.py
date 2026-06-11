@@ -1,11 +1,14 @@
 """
-Deterministic ITR-1 tax calculator for FY 2025-26 (AY 2026-27).
-Source: https://www.incometaxindia.gov.in/
+Deterministic ITR-1 tax calculator.
+Slab rates, rebate and cess are loaded from the single source of truth
+(tax_rules.json via app.core.tax_rules), grounded in
+https://www.incometaxindia.gov.in/.
 
 Reads from the new array-based schema (schemas.jsonc).
 Supports both old and new tax regimes.
 """
 from app.core.field_calculator import _sum_list, _nf
+from app.core import tax_rules
 
 
 def calculate_itr1_tax(itr_doc: dict) -> dict:
@@ -29,7 +32,7 @@ def calculate_itr1_tax(itr_doc: dict) -> dict:
     if net_salary == 0.0:
         gross = _nf(si, "gross_salary")
         exempt = _nf(si, "exempt_allowances")
-        std_ded = 75000.0 if tax_regime == "NEW" else 50000.0
+        std_ded = tax_rules.standard_deduction(tax_regime)
         professional_tax = _nf(si, "professional_tax")
         net_salary = max(gross - exempt - std_ded - professional_tax, 0.0)
 
@@ -62,21 +65,11 @@ def calculate_itr1_tax(itr_doc: dict) -> dict:
 
     taxable_income = max(gross_total_income - total_deductions, 0.0)
 
-    # ── Tax slab computation ──────────────────────────────────────────────
-    if tax_regime == "OLD":
-        tax = _compute_old_regime_tax(taxable_income)
-        rebate_limit = 500000.0
-        rebate_max = 12500.0
-    else:
-        tax = _compute_new_regime_tax(taxable_income)
-        rebate_limit = 700000.0
-        rebate_max = 25000.0
-
-    # Section 87A rebate
-    if taxable_income <= rebate_limit:
-        tax = max(tax - min(tax, rebate_max), 0.0)
-
-    tax = round(tax * 1.04, 2)  # 4% cess
+    # ── Tax slab computation (rates from the single source of truth) ──────
+    tax = tax_rules.slab_tax(taxable_income, tax_regime)
+    # Section 87A rebate (+ new-regime marginal relief just above the limit)
+    tax = tax_rules.apply_rebate_and_relief(taxable_income, tax, tax_regime)
+    tax = round(tax * (1.0 + tax_rules.cess_rate(tax_regime)), 2)  # health & education cess
 
     # ── Taxes paid ────────────────────────────────────────────────────────
     tp = itr_doc.get("taxes_paid", {})
@@ -141,35 +134,3 @@ def calculate_itr1_with_comparison(itr_doc: dict, chosen: str = "NEW") -> dict:
         "new_regime_payable": new["net_tax_payable"],
         "old_regime_payable": old["net_tax_payable"],
     }
-
-
-def _compute_old_regime_tax(income: float) -> float:
-    tax = 0.0
-    if income > 1000000:
-        tax += (income - 1000000) * 0.30
-        income = 1000000.0
-    if income > 500000:
-        tax += (income - 500000) * 0.20
-        income = 500000.0
-    if income > 250000:
-        tax += (income - 250000) * 0.05
-    return tax
-
-
-def _compute_new_regime_tax(income: float) -> float:
-    tax = 0.0
-    if income > 1500000:
-        tax += (income - 1500000) * 0.30
-        income = 1500000.0
-    if income > 1200000:
-        tax += (income - 1200000) * 0.20
-        income = 1200000.0
-    if income > 900000:
-        tax += (income - 900000) * 0.15
-        income = 900000.0
-    if income > 600000:
-        tax += (income - 600000) * 0.10
-        income = 600000.0
-    if income > 300000:
-        tax += (income - 300000) * 0.05
-    return tax
