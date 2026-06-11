@@ -1,0 +1,217 @@
+{
+  "apply_extraction_tool": {
+    "params": {
+      "extraction_result": {
+        "annotation": "<class 'dict'>",
+        "required": true
+      },
+      "user_id": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  },
+  "ask_user_via_email_tool": {
+    "params": {
+      "question": {
+        "annotation": "<class 'str'>",
+        "required": true
+      },
+      "subject": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "timeout_seconds": {
+        "annotation": "<class 'int'>",
+        "required": false
+      }
+    }
+  },
+  "calculate_itr1_tax_tool": {
+    "params": {
+      "advance_tax": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "deduction_80c": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "deduction_80ccd1b": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "deduction_80d": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "dividend_income": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "fd_interest": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "gross_salary": {
+        "annotation": "<class 'float'>",
+        "required": true
+      },
+      "savings_interest": {
+        "annotation": "<class 'float'>",
+        "required": false
+      },
+      "tax_regime": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "tds_salary": {
+        "annotation": "<class 'float'>",
+        "required": false
+      }
+    }
+  },
+  "calculate_itr2_tax_tool": {
+    "params": {
+      "itr2_data": {
+        "annotation": "<class 'dict'>",
+        "required": true
+      }
+    }
+  },
+  "check_state_tool": {
+    "params": {
+      "user_id": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  },
+  "create_tax_reminder_tool": {
+    "params": {}
+  },
+  "export_findings_to_sheet_tool": {
+    "params": {
+      "extraction_result": {
+        "annotation": "<class 'dict'>",
+        "required": true
+      },
+      "tax_summary": {
+        "annotation": "<class 'dict'>",
+        "required": false
+      }
+    }
+  },
+  "get_document_tool": {
+    "params": {
+      "file_name": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  },
+  "process_document_tool": {
+    "params": {
+      "document_data": {
+        "annotation": "<class 'dict'>",
+        "required": true
+      },
+      "source_doc_id": {
+        "annotation": "<class 'str'>",
+        "required": false
+      }
+    }
+  },
+  "read_unvouched_transactions_tool": {
+    "params": {
+      "spreadsheet_id": {
+        "annotation": "<class 'str'>",
+        "required": false
+      }
+    }
+  },
+  "retrieve_tax_rules_tool": {
+    "params": {
+      "itr_type": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "regime": {
+        "annotation": "<class 'str'>",
+        "required": false
+      }
+    }
+  },
+  "send_clarification_email_tool": {
+    "params": {
+      "body": {
+        "annotation": "<class 'str'>",
+        "required": true
+      },
+      "subject": {
+        "annotation": "<class 'str'>",
+        "required": true
+      },
+      "to_email": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  },
+  "update_verified_transaction_tool": {
+    "params": {
+      "row_index": {
+        "annotation": "<class 'int'>",
+        "required": true
+      },
+      "spreadsheet_id": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "verified_amount": {
+        "annotation": "<class 'float'>",
+        "required": true
+      }
+    }
+  },
+  "write_state_tool": {
+    "params": {
+      "updates": {
+        "annotation": "<class 'dict'>",
+        "required": true
+      },
+      "user_id": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  },
+  "write_unvouched_transaction_tool": {
+    "params": {
+      "amount": {
+        "annotation": "<class 'float'>",
+        "required": true
+      },
+      "date": {
+        "annotation": "<class 'str'>",
+        "required": true
+      },
+      "description": {
+        "annotation": "<class 'str'>",
+        "required": true
+      },
+      "source": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "spreadsheet_id": {
+        "annotation": "<class 'str'>",
+        "required": false
+      },
+      "transaction_type": {
+        "annotation": "<class 'str'>",
+        "required": true
+      }
+    }
+  }
+}

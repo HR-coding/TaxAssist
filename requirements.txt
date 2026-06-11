@@ -1,0 +1,25 @@
+fastapi
+uvicorn
+pydantic
+pymongo
+mongomock   # offline-dev fallback when MONGO_URI is unset (in-memory Mongo)
+mcp
+# Postgres control plane (identity / profiles / oauth tokens / feedback)
+sqlalchemy
+psycopg[binary]
+cryptography
+pyjwt
+# Async agent runs (Phase 2)
+rq
+redis
+python-dotenv
+certifi
+google-auth
+google-auth-oauthlib
+google-api-python-client
+google-generativeai
+google-genai
+google-adk
+# Vertex AI Agent Engine — Google Cloud Agent Builder managed runtime (deploy only)
+google-cloud-aiplatform[adk,agent_engines]
+pdfplumber

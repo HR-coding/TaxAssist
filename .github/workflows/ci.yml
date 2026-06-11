@@ -1,0 +1,55 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  # (1) PRs + any push: lint + tool-schema gate + fully-mocked tests. NEVER deploys.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: pip install ruff pytest
+      - name: Lint
+        run: ruff check app
+      - name: Tool-schema compatibility gate (blocks breaking tool-contract changes)
+        run: python scripts/check_tool_schema.py
+      - name: Tests (all MongoDB + Google calls mocked)
+        run: pytest app/tests -q
+
+  # (2) Merge to main -> auto-deploy to Staging.
+  deploy-staging:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & deploy to staging
+        run: |
+          echo "Build images, push to registry, deploy to Cloud Run (staging),"
+          echo "and update the Vertex AI Agent Engine staging agent."
+          # gcloud auth + builds submit + run deploy + python -m app.orchestrator.agent_engine
+
+  # (3) GitHub Release OR manual dispatch -> Production, behind manual approval.
+  deploy-production:
+    needs: test
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production   # configure a required-reviewers protection rule on this env
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & deploy to production
+        run: |
+          echo "Deploy to Cloud Run (prod) + Vertex AI Agent Engine (prod)."
+          # gcloud builds submit + run deploy + agent_engine deploy

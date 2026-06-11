@@ -1,0 +1,93 @@
+# TaxAssist
+
+An autonomous, **multi-user Indian Income Tax filing assistant** (ITR-1 & ITR-2) powered by **Gemini** on **Google Cloud Agent Builder**, with **MongoDB**
+(via the official **MongoDB MCP server**) as the data layer.
+
+The agent reads a taxpayer's documents from Google Drive, extracts the figures with
+Gemini vision OCR, asks the user to confirm over email (human-in-the-loop), computes
+tax deterministically from official slab rates, and writes the results back to Google
+Sheets — all under a strict, security-first architecture where the AI is treated as
+untrusted and can never tamper with tax data or leak personal information.
+
+> Architecture details: see **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)**.
+
+---
+
+## What it does
+
+- **Drive → OCR**: detects documents (Form 16, etc.), converts to PDF, extracts figures
+  with Gemini 2.5-flash vision (handles dense tables and scans).
+- **Human-in-the-loop over email**: emails the user to confirm extracted values /
+  approve computation; reads the replies and resumes — as durable, resumable runs.
+- **Deterministic tax engine**: ITR-1 & ITR-2 computed from gov slab rates (no LLM in
+  the math), old vs new regime comparison.
+- **Google Workspace**: Gmail, Calendar (deadline reminders), Sheets (findings + result),
+  Drive — per user.
+- **Multi-tenant**: one account → many profiles (e.g. self + spouse), each isolated.
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Agent | **Gemini** (2.0/2.5-flash) via **Google ADK** → **Vertex AI Agent Engine** |
+| Data plane | **MongoDB Atlas** via the **MongoDB MCP server** (partner) |
+| Control plane | **PostgreSQL** (users, profiles, encrypted tokens, feedback) |
+| Queue | **Redis + RQ** (async runs) |
+| API | **FastAPI** |
+| OCR | Gemini vision + pdfplumber |
+
+No competing AI or cloud services are used.
+
+## Security highlights
+
+- **3-way handshake gateway** (HMAC identity + state-gated authorization + intent
+  reconciliation + payload sanitization; optional signed-request mode).
+- **PII vault** — personal data is tokenized before the AI ever sees it; reconstructed
+  only in the local layer for outbound writes.
+- **In-process guards** — the agent cannot escalate the workflow or write fabricated tax
+  data (provenance-checked); document registration is system-only.
+- **Strict email format** — internal field keys / code never appear in emails (see
+  `app/core/email_format.py`).
+- **Tenant isolation** — every data access is validated against profile ownership.
+
+## Setup
+
+1. **Install**: `pip install -r requirements.txt`
+2. **Env**: copy `.env.example` → `.env` and fill it (generation commands are in the file).
+   Minimum to boot: `MONGO_URI`, `GOOGLE_API_KEY`, `AGENT_SECRET_KEY`, `CONTROL_ENC_KEY`
+   (+ `POSTGRES_URL` for the control plane; omit for SQLite dev).
+3. **Google OAuth**: place `credentials.json` at the root (or set `GOOGLE_CREDENTIALS_FILE`).
+   Production uses per-user web OAuth with tokens encrypted in Postgres.
+4. **MongoDB MCP server** (optional locally; required for partner integration at runtime):
+   ```bash
+   export MDB_MCP_CONNECTION_STRING="$MONGO_URI"
+   npx -y mongodb-mcp-server --transport http --httpPort 3000
+   # then set MONGODB_MCP_URL=http://127.0.0.1:3000/mcp in .env
+   ```
+
+## Run (local)
+
+```bash
+uvicorn app.main:app --reload                 # API + gateway
+rq worker -u $REDIS_URL tax-agent             # async run worker (if REDIS_URL set)
+```
+
+## Test
+
+```bash
+pytest app/tests -q
+```
+**165 tests** — `unit/`, `integration/`, `security/` — all MongoDB & Google calls mocked
+(hermetic). Tool-contract gate: `python scripts/check_tool_schema.py`.
+
+## Deploy
+
+- **Agent** → Vertex AI Agent Engine: `python -m app.orchestrator.agent_engine`
+  (set `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `AGENT_ENGINE_STAGING_BUCKET`).
+- **Backend** → Docker (`Dockerfile`) → **Google Cloud Run** (app + `mongodb-mcp/` service).
+- **CI/CD** → `.github/workflows/ci.yml`: PRs run lint + tool-schema gate + tests;
+  `main` → staging; release/dispatch → production (manual approval).
+
+## License
+
+[Apache-2.0](LICENSE).

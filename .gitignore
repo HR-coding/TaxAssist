@@ -1,0 +1,34 @@
+.env
+env.txt
+venv/
+uploads/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+# Google OAuth secrets — never commit these
+credentials.json
+client_secret.json
+token.json
+*.zip
+*.db
+mock_drive/
+**/mock_drive/
+temp/
+**/temp/
+*.png
+*.pdf
+*.docx
+structure.txt
+**/.adk/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Runtime artifacts
+.ocr_findings.json
+demo_run.log
+*.log
+.oauth.log
+app/static/

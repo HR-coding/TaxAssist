@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-page text-ink-500 antialiased font-sans;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-paper shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+      transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/40
+      focus-visible:ring-offset-2 focus-visible:ring-offset-page disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-accent-600 text-white hover:bg-accent-700;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-paper text-ink-700 hover:bg-page hover:border-ink-400/30;
+  }
+  .btn-text {
+    @apply inline-flex items-center gap-1.5 text-sm font-semibold text-accent-700 hover:text-accent-900;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-accent-700;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm text-ink-900
+      placeholder:text-ink-400 focus:border-accent-400 focus:outline-none focus:ring-2 focus:ring-accent-400/20;
+  }
+  .label {
+    @apply text-xs font-semibold uppercase tracking-wider text-ink-400;
+  }
+}
+
+/* Hairline grid texture for the hero — extremely subtle, institutional. */
+.grid-faint {
+  background-image:
+    linear-gradient(to right, rgba(20, 24, 31, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 24, 31, 0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(36rem 26rem at 30% 0%, black, transparent 78%);
+}
