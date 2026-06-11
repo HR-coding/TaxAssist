@@ -12,7 +12,8 @@ Exposes the per-profile data the UI needs to render *all tasks* and give the use
 
 Every route is tenant-checked: the caller must own the profile.
 """
-from fastapi import APIRouter, Depends, HTTPException
+import json
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 
 from app.orchestrator.auth_api import get_current_user
@@ -127,6 +128,53 @@ def profile_itr(pid: str, user: dict = Depends(get_current_user)):
     _owned_profile(pid, user)
     rec = db.itr_records.find_one({"user_id": pid}, {"_id": 0})
     return rec or {"filing_status": "NOT_STARTED"}
+
+
+def _merge_profile_identity(rec: dict, p) -> None:
+    """Fill the export's name from the profile when the ITR record's is empty.
+    Runs in the trusted local layer on reconstructed identity — the agent never
+    sees this path."""
+    pi = rec.setdefault("personal_info", {})
+    if not pi.get("first_name") and not pi.get("last_name"):
+        parts = (p.display_name or "").strip().split()
+        pi["first_name"] = parts[0] if parts else ""
+        pi["last_name"] = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+
+# tax_result is trusted only if it carries every total the exporter reads with [];
+# otherwise the exporter recomputes deterministically from the ledger.
+_TAX_RESULT_KEYS = {
+    "gross_total_income", "taxable_income", "total_deductions",
+    "net_tax_payable", "refund_due",
+}
+
+
+@router.get("/{pid}/itr-json")
+def profile_itr_json(pid: str, user: dict = Depends(get_current_user)):
+    """Download the portal-ready ITR JSON (official offline-utility envelope)."""
+    p = _owned_profile(pid, user)
+    rec = db.itr_records.find_one({"user_id": pid}, {"_id": 0})
+    if not rec:
+        raise HTTPException(
+            status_code=404,
+            detail="No computed return yet — run the filing agent first.")
+
+    rec.setdefault("itr_type", p.itr_type)
+    _merge_profile_identity(rec, p)
+
+    ts = rec.get("tax_summary")
+    tax_result = ts if isinstance(ts, dict) and _TAX_RESULT_KEYS <= ts.keys() else None
+
+    from app.core.itr_json_export import build_itr_json
+    payload = build_itr_json(rec, tax_result)
+
+    safe = (p.display_name or "taxpayer").strip().replace(" ", "_") or "taxpayer"
+    fname = f"{rec['itr_type']}_{safe}_AY2026-27.json"
+    return Response(
+        content=json.dumps(payload, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 def _log_run(pid: str, status: str, detail: str, checkpoint=None):

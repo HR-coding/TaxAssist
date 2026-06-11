@@ -117,4 +117,31 @@ export const api = {
       `/profiles/${pid}/check-reply`, { method: "POST" }),
   feedback: (body: { profile_id: string; kind: string; rating?: number; message?: string }) =>
     req<{ status: string; id: string }>("/feedback", { method: "POST", body: JSON.stringify(body) }),
+
+  // Streams the portal-ready ITR JSON (auth header required, so we fetch+blob
+  // rather than a bare <a href>) and triggers a browser download.
+  downloadItrJson: async (pid: string, fallbackName: string) => {
+    const token = tokenGetter();
+    const res = await fetch(`${BASE}/profiles/${pid}/itr-json`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try { detail = (await res.json()).detail ?? detail; } catch { /* ignore */ }
+      throw new ApiError(res.status, typeof detail === "string" ? detail : JSON.stringify(detail));
+    }
+    const cd = res.headers.get("content-disposition") || "";
+    const m = cd.match(/filename="?([^"]+)"?/);
+    const filename = m?.[1] || fallbackName;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
 };

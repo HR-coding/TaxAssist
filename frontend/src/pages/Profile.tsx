@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, RefreshCw, Eye, Activity, ListChecks, Mail, Bot, Sparkles,
   ThumbsUp, ThumbsDown, ChevronRight, Gauge, FolderOpen, Table2, ExternalLink,
-  FileSpreadsheet, Check,
+  FileSpreadsheet, Check, Download,
 } from "lucide-react";
 import { api, AgentRun, ItrSummary, Profile as ProfileT, TasksResponse } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -250,7 +250,9 @@ export default function Profile() {
           <QuickAccess profile={profile} />
           {tasks && <TransparencyPanel tasks={tasks} />}
           <ActivityTimeline runs={runs} running={running} onSeed={seed} busy={busy} />
-          {itr && itr.filing_status && itr.filing_status !== "NOT_STARTED" && <ItrCard itr={itr} />}
+          {itr && itr.filing_status && itr.filing_status !== "NOT_STARTED" && (
+            <ItrCard itr={itr} pid={pid} profile={profile} />
+          )}
           <FeedbackCard pid={pid} />
         </div>
       </div>
@@ -401,11 +403,26 @@ function ActivityTimeline({ runs, running, onSeed, busy }: { runs: AgentRun[]; r
   );
 }
 
-function ItrCard({ itr }: { itr: ItrSummary }) {
+function ItrCard({ itr, pid, profile }: { itr: ItrSummary; pid: string; profile: ProfileT | null }) {
   const summary = itr.tax_summary || {};
   const fmt = (v: any) => typeof v === "number" ? `₹${v.toLocaleString("en-IN")}` : String(v);
   const KEYS = ["taxable_income", "tax_liability", "taxes_paid", "net_tax_payable", "refund_due"];
   const rows = KEYS.filter((k) => k in summary);
+
+  const [downloading, setDownloading] = useState(false);
+  const [dlErr, setDlErr] = useState("");
+  async function download() {
+    setDownloading(true); setDlErr("");
+    const name = `${profile?.itr_type ?? "ITR"}_${(profile?.display_name ?? "taxpayer").replace(/\s+/g, "_")}_AY2026-27.json`;
+    try {
+      await api.downloadItrJson(pid, name);
+    } catch (e: any) {
+      setDlErr(e.message || "Download failed");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2">
@@ -427,6 +444,13 @@ function ItrCard({ itr }: { itr: ItrSummary }) {
           {"old_regime_payable" in summary && <> · old regime would cost ₹{Number(summary.old_regime_payable).toLocaleString("en-IN")} more</>}
         </p>
       )}
+      <button className="btn-secondary mt-4 w-full justify-center" onClick={download} disabled={downloading}>
+        {downloading ? <Spinner /> : <Download className="h-4 w-4" />} Download ITR JSON
+      </button>
+      <p className="mt-2 text-center text-[11px] leading-relaxed text-ink-400">
+        Official offline-utility format — import it at the income-tax portal to e-file.
+      </p>
+      {dlErr && <p className="mt-2 text-center text-xs text-red-600">{dlErr}</p>}
     </div>
   );
 }

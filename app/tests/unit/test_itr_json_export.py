@@ -105,5 +105,60 @@ class TestITR2Export(unittest.TestCase):
         self.assertIn("\"ITR2\"", s)
 
 
+# A complete ledger (full address + father's name) so the official-schema
+# validation has no missing-user-data gaps.
+_COMPLETE_PI = {
+    "pan": "ABCPR1234F", "first_name": "Asha", "last_name": "Rao",
+    "father_name": "Ramesh Rao", "date_of_birth": "1990-01-01",
+    "email": "asha@example.com", "mobile_number": "9876543210",
+    "aadhaar_number": "123412341234", "residence_no": "12", "locality": "MG Road",
+    "city": "Bengaluru", "state_code": "18", "pincode": "560001",
+}
+
+
+class TestSchemaValidation(unittest.TestCase):
+    """Validate generated envelopes against the official IT-Dept JSON Schema —
+    the same contract the offline utility enforces."""
+
+    def _itr1(self, **over):
+        d = dict(_itr1_ledger(), personal_info=_COMPLETE_PI)
+        d.update(over)
+        return d
+
+    def _itr2(self, **over):
+        d = dict(_itr2_ledger(), personal_info=_COMPLETE_PI)
+        d.update(over)
+        return d
+
+    def test_itr1_validates_clean(self):
+        from app.core.itr_json_export import build_itr_json, validate_itr_json
+        errs = validate_itr_json(build_itr_json(self._itr1()))
+        self.assertEqual(errs, [], f"ITR-1 schema errors: {errs[:5]}")
+
+    def test_itr1_old_regime_validates_clean(self):
+        from app.core.itr_json_export import build_itr_json, validate_itr_json
+        errs = validate_itr_json(build_itr_json(self._itr1(tax_regime="OLD")))
+        self.assertEqual(errs, [], f"ITR-1 OLD schema errors: {errs[:5]}")
+
+    def test_itr2_validates_clean(self):
+        from app.core.itr_json_export import build_itr_json, validate_itr_json
+        errs = validate_itr_json(build_itr_json(self._itr2()))
+        self.assertEqual(errs, [], f"ITR-2 schema errors: {errs[:5]}")
+
+    def test_itr2_with_vda_validates_clean(self):
+        from app.core.itr_json_export import build_itr_json, validate_itr_json
+        led = self._itr2(schedule_vda={"total_vda_income": {"value": 80000}})
+        errs = validate_itr_json(build_itr_json(led))
+        self.assertEqual(errs, [], f"ITR-2 VDA schema errors: {errs[:5]}")
+
+    def test_missing_address_is_reported(self):
+        # Without a postal address the schema flags the gaps — proving the
+        # validator actually checks (not vacuously passing).
+        from app.core.itr_json_export import build_itr_json, validate_itr_json
+        bare = dict(_itr1_ledger(), personal_info={"pan": "ABCPR1234F", "first_name": "A"})
+        errs = validate_itr_json(build_itr_json(bare))
+        self.assertTrue(any("Address" in e for e in errs))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
