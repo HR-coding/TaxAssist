@@ -26,7 +26,6 @@ class TestTenancy(unittest.TestCase):
             tenancy.assert_owned(self.user1, "does-not-exist")
 
     def test_resolve_profile_binds_context(self):
-        tok = None
         try:
             pid = tenancy.resolve_profile(self.user1, self.p1)
             self.assertEqual(pid, self.p1)

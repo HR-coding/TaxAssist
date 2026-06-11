@@ -5,7 +5,7 @@ Source: https://www.incometaxindia.gov.in/
 Reads from the new array-based schema (schemas.jsonc).
 Supports both old and new tax regimes.
 """
-from app.core.field_calculator import _sum_list, _sum_nf_list, _nf
+from app.core.field_calculator import _sum_list, _nf
 
 
 def calculate_itr1_tax(itr_doc: dict) -> dict:

@@ -1,11 +1,6 @@
 """Service layer with mocked MongoDB: state tracker, ITR service/mapper, state MCP."""
-import os
-import sys
-import hmac
-import json
 import unittest
-from unittest.mock import MagicMock, patch, call
-from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 
 class TestStateTrackerService(unittest.TestCase):
@@ -116,7 +111,7 @@ class TestITRMapper(unittest.TestCase):
         # salary_income.gross_salary is a scalar NumericField — should call update_itr
         with patch("app.core.itr_mapper.update_itr") as mock_update:
             from app.core.itr_mapper import apply_extraction_to_itr
-            result = apply_extraction_to_itr("u1", {
+            apply_extraction_to_itr("u1", {
                 "document_type": "FORM_16",
                 "financial_year": "2025-26",
                 "extractions": [

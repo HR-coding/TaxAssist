@@ -1,11 +1,5 @@
 """ITR-1/ITR-2 ledger + state model defaults."""
-import os
-import sys
-import hmac
-import json
 import unittest
-from unittest.mock import MagicMock, patch, call
-from datetime import datetime
 
 
 class TestITR1Models(unittest.TestCase):

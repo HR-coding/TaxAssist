@@ -3,7 +3,7 @@ import hmac
 import time
 import hashlib
 import logging
-from fastapi import APIRouter, Header, HTTPException, status, Depends
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel
 from app.core.db import db
 from app.orchestrator.decider import determine_next_action

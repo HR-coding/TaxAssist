@@ -12,7 +12,6 @@ Exposes the per-profile data the UI needs to render *all tasks* and give the use
 
 Every route is tenant-checked: the caller must own the profile.
 """
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 

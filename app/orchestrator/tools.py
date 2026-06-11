@@ -9,8 +9,6 @@ The Gemini ADK agent in agent.py consumes these directly.
 """
 import logging
 from app.mcps.state_mcp import check_state_mcp, write_state_mcp
-
-logger = logging.getLogger("tools")
 from app.mcps.document_mcp import (
     process_document_mcp, apply_extraction_mcp, register_document_mcp, get_document_mcp
 )
@@ -24,6 +22,8 @@ from app.core.itr1_calculator import calculate_itr1_tax
 from app.core.itr2_calculator import calculate_itr2_tax
 from app.core.gmail_client import send_email
 from app.core.calendar_client import create_tax_reminder
+
+logger = logging.getLogger("tools")
 
 
 # ─────────────────────────────────────────────

@@ -7,7 +7,7 @@ Field path rules (from schemas.jsonc):
 """
 import logging
 from datetime import datetime
-from app.core.itr_service import get_itr, update_itr
+from app.core.itr_service import update_itr
 
 logger = logging.getLogger("itr_mapper")
 

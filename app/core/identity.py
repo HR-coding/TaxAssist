@@ -86,7 +86,6 @@ def list_profiles(user_id: str):
 
 def resolve_email_for_profile(profile_id: str):
     """Resolve a profile's owner email — only at contact time, from `users`."""
-    from sqlalchemy import select
     with get_session() as s:
         p = s.get(Profile, profile_id)
         if not p:

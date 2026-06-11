@@ -21,8 +21,10 @@ class TestAsyncRuns(unittest.TestCase):
                                side_effect=lambda f, *a: self.calls.append((f.__name__, a)))
         self.p_ask = patch("app.core.email_hitl.ask_via_email",
                            return_value={"token": "t", "thread_id": "th", "question_id": "q"})
-        self.p_enqueue.start(); self.p_ask.start()
-        self.addCleanup(self.p_enqueue.stop); self.addCleanup(self.p_ask.stop)
+        self.p_enqueue.start()
+        self.p_ask.start()
+        self.addCleanup(self.p_enqueue.stop)
+        self.addCleanup(self.p_ask.stop)
 
     def _status(self, rid):
         with get_session() as s:
@@ -46,13 +48,15 @@ class TestAsyncRuns(unittest.TestCase):
             rc.start_run(self.user, foreign)
 
     def test_poller_enqueues_resume_on_reply(self):
-        rid = rc.start_run(self.user, self.profile); rc.advance_run(rid)
+        rid = rc.start_run(self.user, self.profile)
+        rc.advance_run(rid)
         with patch("app.core.email_hitl.check_reply", return_value="CONFIRM"):
             rc.poll_and_resume()
         self.assertTrue(any(c[0] == "resume_run" and c[1][0] == rid for c in self.calls))
 
     def test_declined_gate_fails_run(self):
-        rid = rc.start_run(self.user, self.profile); rc.advance_run(rid)
+        rid = rc.start_run(self.user, self.profile)
+        rc.advance_run(rid)
         rc.resume_run(rid, "please deny this")
         self.assertEqual(self._status(rid), "failed")
 

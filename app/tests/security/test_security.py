@@ -266,7 +266,8 @@ class TestSignedRequestMode(unittest.TestCase):
         os.environ.pop("AGENT_REQUIRE_SIGNATURE", None)
 
     def _sign(self, ts, user_id, action, schedule):
-        import hmac, hashlib
+        import hmac
+        import hashlib
         canonical = f"{ts}:{user_id}:{action}:{schedule}"
         return hmac.new(self.SECRET.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 

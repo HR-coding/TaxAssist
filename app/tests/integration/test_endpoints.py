@@ -1,11 +1,7 @@
 """End-to-end: gateway API + orchestrator workflow (mocked DB + Google APIs)."""
 import os
-import sys
-import hmac
-import json
 import unittest
-from unittest.mock import MagicMock, patch, call
-from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 
 class TestGateway(unittest.TestCase):
@@ -127,7 +123,7 @@ class TestOrchestratorITR1(unittest.TestCase):
 
     def _run_workflow(self, state_doc, itr_doc=None, document_data=None):
         with patch("app.orchestrator.engine.check_state_mcp") as mock_check, \
-             patch("app.orchestrator.engine.write_state_mcp") as mock_write, \
+             patch("app.orchestrator.engine.write_state_mcp"), \
              patch("app.orchestrator.engine.sync_google_drive"), \
              patch("app.orchestrator.engine.get_itr") as mock_get_itr, \
              patch("app.orchestrator.engine.create_itr") as mock_create_itr, \

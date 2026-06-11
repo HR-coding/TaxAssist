@@ -52,7 +52,8 @@ class TestFeedbackPrivacy(unittest.TestCase):
         identity.record_consent(uid, "v1.0")
         identity.record_feedback(pid, "bug", message="x")
         with get_session() as s:
-            s.add(AgentRun(profile_id=pid, status="done")); s.commit()
+            s.add(AgentRun(profile_id=pid, status="done"))
+            s.commit()
 
         mock_db = MagicMock()
         mock_db.__getitem__.return_value.delete_many.return_value.deleted_count = 3

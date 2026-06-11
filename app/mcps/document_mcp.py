@@ -1,6 +1,6 @@
 from app.core.itr_mapper import apply_extraction_to_itr, map_document_to_itr
 from app.core.document_registry import (
-    register_document, get_document, get_document_by_id, get_document_by_source_id
+    register_document, get_document
 )
 
 

@@ -1,11 +1,5 @@
 """Field calculator, deterministic tax calculators, regime comparison."""
-import os
-import sys
-import hmac
-import json
 import unittest
-from unittest.mock import MagicMock, patch, call
-from datetime import datetime
 
 
 def _itr1_doc(gross_salary, tax_regime="NEW", savings=0, fd=0, dividend=0,
@@ -217,7 +211,6 @@ class TestITR1Calculator(unittest.TestCase):
         self.assertEqual(res["net_tax_payable"], 0.0)
 
     def test_old_regime_80c_cap(self):
-        from app.core.itr1_calculator import calculate_itr1_tax
         from app.core.field_calculator import compute_calculated_fields
         doc = _itr1_doc(1200000, tax_regime="OLD", d80c=200000)  # exceeds 1.5L cap
         doc["itr_type"] = "ITR1"

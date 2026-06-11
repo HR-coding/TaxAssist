@@ -124,7 +124,6 @@ def _handle_new_file(service, user_id: str, drive_file: dict):
     """
     file_id = drive_file["id"]
     filename = drive_file["name"]
-    mime_type = drive_file.get("mimeType", "")
 
     extraction_result = {}
     data_hash = ""
@@ -233,7 +232,6 @@ def _handle_modified_file(service, user_id: str, drive_file: dict, existing_doc:
     """
     file_id = drive_file["id"]
     filename = drive_file["name"]
-    mime_type = drive_file.get("mimeType", "")
     stored_hash = existing_doc.get("file_hash", "")
 
     new_extraction = {}

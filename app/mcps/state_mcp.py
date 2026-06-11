@@ -2,7 +2,6 @@
 State Management MCP — mandatory first-step gate for all agent actions.
 CLAUDE.md: "Before initiating any task, the agent must query the State Management MCP."
 """
-from datetime import datetime
 from app.core.state_tracker_service import get_state, create_state, update_state
 from app.orchestrator.decider import evaluate_itr1_next_step, evaluate_itr2_next_step
 from app.orchestrator.decider import _get_item_status

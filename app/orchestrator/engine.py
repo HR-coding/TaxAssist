@@ -7,7 +7,7 @@ from app.core.workspace_orchestrator import (
 from app.core.pii_vault import anonymize_document
 from app.core.itr_service import get_itr, create_itr, update_itr
 from app.core.itr_mapper import map_document_to_itr
-from app.core.itr1_calculator import calculate_itr1_tax, calculate_itr1_with_comparison
+from app.core.itr1_calculator import calculate_itr1_with_comparison
 from app.core.itr2_calculator import calculate_itr2_tax
 
 logger = logging.getLogger("orchestrator")
