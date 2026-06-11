@@ -32,3 +32,5 @@ demo_run.log
 *.log
 .oauth.log
 app/static/
+
+node_modules/
