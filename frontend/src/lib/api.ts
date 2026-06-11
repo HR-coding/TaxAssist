@@ -102,6 +102,7 @@ export interface ItrSummary {
 // ── endpoints ────────────────────────────────────────────────────────────────
 export const api = {
   me: () => req<Me>("/me"),
+  demoLogin: () => req<{ token: string; email: string }>("/auth/demo", { method: "POST" }),
   listProfiles: () => req<Profile[]>("/profiles"),
   createProfile: (body: { display_name: string; relation: string; itr_type: string; drive_folder_id?: string }) =>
     req<{ id: string }>("/profiles", { method: "POST", body: JSON.stringify(body) }),

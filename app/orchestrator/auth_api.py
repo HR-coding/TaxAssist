@@ -81,6 +81,37 @@ def _dev_claims(token: str) -> Optional[dict]:
     return {"id": email, "email": email} if email else None
 
 
+# ── live demo (no Google OAuth for the visitor) ──────────────────────────────
+# A judge clicks "Try the live demo": we mint an app session for a fresh,
+# isolated ephemeral user — NO Google consent screen. That user has no per-user
+# OAuth token, so every Google call falls back to the shared, team-pre-authorized
+# token.json (the demo Google account). Result: full, REAL Drive/Gmail/Sheets/
+# Calendar, with each visitor isolated as their own tenant. Gated by DEMO_MODE.
+_DEMO_DOMAIN = os.getenv("DEMO_USER_DOMAIN", "demo.taxassist.local")
+
+
+def demo_enabled() -> bool:
+    return os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes")
+
+
+def is_demo_email(email: Optional[str]) -> bool:
+    return bool(email) and email.endswith("@" + _DEMO_DOMAIN)
+
+
+@router.post("/auth/demo")
+def demo_login():
+    """Issue a session for a fresh isolated demo user (no Google OAuth)."""
+    if not demo_enabled():
+        raise HTTPException(status_code=404, detail="Demo mode is not enabled")
+    import uuid
+    from app.core import identity
+    email = f"demo+{uuid.uuid4().hex[:8]}@{_DEMO_DOMAIN}"
+    identity.create_user(email)
+    user = identity.get_user_by_email(email)
+    identity.create_profile(user.id, "Demo Filer", relation="self", itr_type="ITR1")
+    return {"token": issue_session(user.id, email), "email": email}
+
+
 def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     """FastAPI dependency: verify the bearer token and resolve our control-plane user."""
     if not authorization or not authorization.lower().startswith("bearer "):

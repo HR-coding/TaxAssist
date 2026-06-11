@@ -12,6 +12,7 @@ Exposes the per-profile data the UI needs to render *all tasks* and give the use
 
 Every route is tenant-checked: the caller must own the profile.
 """
+import os
 import json
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
@@ -339,6 +340,14 @@ def run_filing(pid: str, user: dict = Depends(get_current_user)):
 
     _log_run(pid, "done", "Synced Google Drive - scanned the linked folder for tax documents.")
     _log_run(pid, "done", "Prepared Form 16 figures and tokenized PII before any AI processing.")
+
+    # Live demo: the visitor has no real inbox to reply from, so skip the email
+    # gate and compute now. Drive/Sheets/Calendar/Gmail still run for real via the
+    # shared demo Google account (token.json fallback).
+    from app.orchestrator.auth_api import is_demo_email
+    if is_demo_email(email):
+        _log_run(pid, "done", "Demo: figures auto-approved (no reply inbox in demo mode).")
+        return _compute_now(pid, p, user, os.getenv("DEMO_INBOX_EMAIL") or email)
 
     # Real human-in-the-loop gate: email the figures, park until the user replies.
     from app.core import email_hitl

@@ -24,6 +24,23 @@ untrusted and can never tamper with tax data or leak personal information.
 - _Your Name_ — role
 - _Teammate_ — role
 
+## Try it live (no sign-in)
+
+On the login screen, click **“Try the live demo — no sign-in.”** It starts an
+isolated demo tenant and runs the **real** agent — Drive → figures → deterministic
+compute → Google Sheet → Calendar reminder — on a **sandbox Google Workspace**, so
+judges experience the full integration without a Google consent screen.
+
+How it works: the visitor is signed in with the app’s own session (no Google
+OAuth). A demo user holds no per-user token, so every Google call falls back to the
+team’s pre-authorized `token.json` (the sandbox account). Each visitor is a separate
+tenant; the email approval gate is auto-approved in demo mode (no reply inbox).
+
+To enable it on a deployment, set `DEMO_MODE=1` (+ optional `DEMO_INBOX_EMAIL` for
+the sandbox Gmail, `DEMO_USER_DOMAIN`) and mount the sandbox account’s `token.json`
+via `GOOGLE_TOKEN_FILE`. Share the sandbox Drive/Sheet publicly (view) so the
+in-app “Open results sheet / Drive folder” links work for anyone.
+
 ---
 
 ## What it does

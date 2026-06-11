@@ -43,6 +43,33 @@ class TestAuthApi(unittest.TestCase):
             r = self.client.get("/", headers={"Origin": "http://localhost:5173"})
             self.assertEqual(r.headers.get("access-control-allow-origin"), "http://localhost:5173")
 
+    def test_demo_login_disabled_by_default(self):
+        with patch.dict("os.environ", {}, clear=False):
+            import os
+            os.environ.pop("DEMO_MODE", None)
+            self.assertEqual(self.client.post("/auth/demo").status_code, 404)
+
+    def test_demo_login_issues_isolated_session(self):
+        with patch.dict("os.environ", {"DEMO_MODE": "1", "AGENT_SECRET_KEY": "k"}):
+            r = self.client.post("/auth/demo")
+            self.assertEqual(r.status_code, 200)
+            body = r.json()
+            self.assertTrue(body["email"].endswith("@demo.taxassist.local"))
+            # the session works and the demo user is pre-seeded with a profile
+            me = self.client.get("/me", headers={"Authorization": f"Bearer {body['token']}"})
+            self.assertEqual(me.status_code, 200)
+            self.assertEqual(me.json()["user"]["email"], body["email"])
+            self.assertEqual(len(me.json()["profiles"]), 1)
+
+    def test_two_demo_sessions_are_isolated(self):
+        with patch.dict("os.environ", {"DEMO_MODE": "1", "AGENT_SECRET_KEY": "k"}):
+            a = self.client.post("/auth/demo").json()
+            b = self.client.post("/auth/demo").json()
+            self.assertNotEqual(a["email"], b["email"])
+            pa = self.client.get("/me", headers={"Authorization": f"Bearer {a['token']}"}).json()["profiles"]
+            pb = self.client.get("/me", headers={"Authorization": f"Bearer {b['token']}"}).json()["profiles"]
+            self.assertNotEqual(pa[0]["id"], pb[0]["id"])  # separate tenants
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
